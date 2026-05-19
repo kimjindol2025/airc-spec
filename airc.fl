@@ -1,0 +1,103 @@
+;; airc.fl — AIRC CLI
+;; 사용법: node bootstrap.js run airc.fl <cmd> [node-id]
+;;   airc hot
+;;   airc next
+;;   airc lock
+;;   airc graveyard
+;;   airc why <node-id>
+;;   airc status  (기본)
+
+(define SPEC_PATH "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc")
+
+(defn load-spec []
+  (let [$raw (file-read SPEC_PATH)]
+    (if (nil-or-empty? $raw)
+      (do (println "ERROR: SPEC.airc 없음 — " SPEC_PATH) nil)
+      (json-parse $raw))))
+
+(defn print-hot [$spec]
+  (let [$hot  (get $spec "hot")
+        $node (get-in $spec ["nodes" $hot])]
+    (println (str "HOT: " $hot))
+    (println (str "  " (get $node "v")))
+    (println (str "  verified: " (str (get $node "verified"))))
+    (println (str "  next: " (str (get $node "next"))))))
+
+(defn print-next [$spec]
+  (let [$hot   (get $spec "hot")
+        $node  (get-in $spec ["nodes" $hot])
+        $nexts (get $node "next")]
+    (println (str "NEXT (from hot=" $hot "):"))
+    (doseq [$nid $nexts]
+      (let [$n (get-in $spec ["nodes" $nid])]
+        (if (nil? $n)
+          (println (str "  → " $nid " (노드 없음)"))
+          (println (str "  → " $nid ": " (get $n "v"))))))))
+
+(defn print-lock [$spec]
+  (let [$locks (get $spec "lock")]
+    (println (str "LOCK (" (str (length $locks)) "개 — 위반 금지):"))
+    (doseq [$l $locks]
+      (println (str "  [" (str (get $l "severity")) "] " (get $l "rule")))
+      (println (str "       why: " (get $l "why")))
+      (println (str "       src: " (str (get $l "source")))))))
+
+(defn print-graveyard [$spec]
+  (let [$g (get $spec "graveyard")]
+    (println (str "GRAVEYARD (" (str (length $g)) "개 — 재도입 금지):"))
+    (doseq [$item $g]
+      (println (str "  ✗ " (get $item "idea")))
+      (println (str "    why: " (get $item "why"))))))
+
+(defn print-why [$spec $nid]
+  (let [$node (get-in $spec ["nodes" $nid])]
+    (if (nil? $node)
+      (println (str "노드 없음: " $nid))
+      (do
+        (println (str "WHY [" $nid "] " (get $node "v")))
+        (println (str "  type: " (get $node "t")))
+        (let [$why (get $node "why")]
+          (when (not (nil? $why))
+            (println "  why:")
+            (doseq [$w $why]
+              (println (str "    - " $w)))))
+        (let [$quote (get $node "quote")]
+          (when (not (nil? $quote))
+            (println (str "  quote: \"" $quote "\""))))
+        (let [$cause (get $node "cause")]
+          (when (not (nil? $cause))
+            (println (str "  cause: " $cause))
+            (println (str "  fix: " (str (get $node "fix"))))))))))
+
+(defn print-handoff [$spec]
+  (println "HANDOFF (다음 Claude 인수인계):")
+  (doseq [$h (get-in $spec ["session" "handoff"])]
+    (println (str "  • " $h))))
+
+(defn print-status [$spec]
+  (println "=== AIRC STATUS ===")
+  (print-hot $spec)
+  (println "")
+  (print-lock $spec)
+  (println "")
+  (print-graveyard $spec)
+  (println "")
+  (print-handoff $spec))
+
+;; --- 진입점 ---
+
+(let [$argv (process-argv)
+      $cmd  (if (> (length $argv) 2) (nth $argv 2) "status")
+      $arg1 (if (> (length $argv) 3) (nth $argv 3) nil)
+      $spec (load-spec)]
+  (when (not (nil? $spec))
+    (cond
+      (= $cmd "hot")       (print-hot $spec)
+      (= $cmd "next")      (print-next $spec)
+      (= $cmd "lock")      (print-lock $spec)
+      (= $cmd "graveyard") (print-graveyard $spec)
+      (= $cmd "handoff")   (print-handoff $spec)
+      (= $cmd "why")       (if (nil? $arg1)
+                             (println "사용법: airc why <node-id>")
+                             (print-why $spec $arg1))
+      :else                (print-status $spec))))

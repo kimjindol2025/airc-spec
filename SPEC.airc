@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "date": "2026-05-20",
   "cmd": "python3 -c \"import json; d=json.load(open('SPEC.airc')); print('hot:', d['hot']); print('next:', d['nodes'][d['hot']]['next'])\"",
-
   "hot": "task-002",
-
   "constitution": {
     "1_audience": "AI 전용. 인간 가독성을 위한 구조 타협 금지",
     "2_consistency": "기록 형식과 읽기 형식이 동일한 규칙. 예외 없음",
@@ -19,33 +17,68 @@
     "10_assumption_lifecycle": "assumption은 검증 후 resolved_by 로 fact 연결 필수",
     "11_user_intent_immutable": "사용자 발언은 quote 필드에 원문 보존. 요약/해석 금지. immutable:true"
   },
-
   "node_types": {
-    "problem":     "현재 문제 — 해결 전까지 hot 가능",
-    "task":        "다음 행동 — entry + check + verified 필수",
-    "decision":    "구조 결정 — why 필수. lock:true 가능",
-    "fact":        "검증된 사실 — verified:true 필수",
-    "assumption":  "검증 전 가정 — verify_by 필수. status:pending",
-    "error":       "실패 기록 — cause + fix + repeat_risk 필수",
+    "problem": "현재 문제 — 해결 전까지 hot 가능",
+    "task": "다음 행동 — entry + check + verified 필수",
+    "decision": "구조 결정 — why 필수. lock:true 가능",
+    "fact": "검증된 사실 — verified:true 필수",
+    "assumption": "검증 전 가정 — verify_by 필수. status:pending",
+    "error": "실패 기록 — cause + fix + repeat_risk 필수",
     "user_intent": "사용자 원문 — quote 필드. immutable:true 필수"
   },
-
   "field_rules": {
-    "all_nodes":      ["t", "v"],
-    "task":           ["entry", "check", "verified", "next"],
-    "decision":       ["why", "verified"],
-    "fact":           ["verified:true"],
-    "assumption":     ["verify_by", "status"],
-    "error":          ["cause", "fix", "repeat_risk"],
-    "user_intent":    ["quote", "source", "immutable:true"],
-    "lock_item":      ["rule", "why", "source", "severity"],
-    "lifecycle":      ["state", "by", "at"]
+    "all_nodes": [
+      "t",
+      "v"
+    ],
+    "task": [
+      "entry",
+      "check",
+      "verified",
+      "next"
+    ],
+    "decision": [
+      "why",
+      "verified"
+    ],
+    "fact": [
+      "verified:true"
+    ],
+    "assumption": [
+      "verify_by",
+      "status"
+    ],
+    "error": [
+      "cause",
+      "fix",
+      "repeat_risk"
+    ],
+    "user_intent": [
+      "quote",
+      "source",
+      "immutable:true"
+    ],
+    "lock_item": [
+      "rule",
+      "why",
+      "source",
+      "severity"
+    ],
+    "lifecycle": [
+      "state",
+      "by",
+      "at"
+    ]
   },
-
-  "lifecycle_states": ["active", "void", "deprecated", "superseded", "experimental", "frozen"],
-
+  "lifecycle_states": [
+    "active",
+    "void",
+    "deprecated",
+    "superseded",
+    "experimental",
+    "frozen"
+  ],
   "nodes": {
-
     "task-001": {
       "t": "task",
       "v": "SPEC.airc 확정 및 airc-parser.fl 구현",
@@ -53,34 +86,43 @@
         "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc",
         "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc-parser.fl"
       ],
-      "check": ["node /home/kimjin/freelang-v11/bootstrap.js run airc-parser.fl"],
+      "check": [
+        "node /home/kimjin/freelang-v11/bootstrap.js run airc-parser.fl"
+      ],
       "verified": true,
-      "next": ["task-002"]
+      "next": [
+        "task-002"
+      ]
     },
-
     "task-002": {
       "t": "task",
       "v": "CLI 구현: airc read / airc why / airc graveyard / airc next",
       "verified": false,
-      "next": ["task-003"]
+      "next": [
+        "task-003"
+      ]
     },
-
     "task-003": {
       "t": "task",
       "v": "FREEDOC.fds → .airc 마이그레이션 도구",
       "verified": false,
       "next": []
     },
-
     "dec-001": {
       "t": "decision",
       "v": "포맷은 JSON. transport layer. 본질은 AI State Graph",
-      "why": ["파싱 100% 확실", "타입 명확", "추론 불필요", "validator 구현 가능"],
+      "why": [
+        "파싱 100% 확실",
+        "타입 명확",
+        "추론 불필요",
+        "validator 구현 가능"
+      ],
       "verified": true,
       "lock": true,
-      "lifecycle": { "state": "active" }
+      "lifecycle": {
+        "state": "active"
+      }
     },
-
     "dec-002": {
       "t": "decision",
       "v": "append-only. 노드 삭제 금지. lifecycle.state=void 로만 무효화",
@@ -91,46 +133,57 @@
       ],
       "verified": true,
       "lock": true,
-      "lifecycle": { "state": "active" }
+      "lifecycle": {
+        "state": "active"
+      }
     },
-
     "dec-003": {
       "t": "decision",
       "v": "replaces 필드로 canonical 노드 명시",
-      "why": ["AI는 무엇이 현재 유효한지 즉시 알아야 함"],
+      "why": [
+        "AI는 무엇이 현재 유효한지 즉시 알아야 함"
+      ],
       "verified": true,
-      "lifecycle": { "state": "active" }
+      "lifecycle": {
+        "state": "active"
+      }
     },
-
     "u-001": {
       "t": "user_intent",
       "quote": "초기 기획이 바보 같더라도 진행하면서 문제를 찾아야지 이거 바보네 하고 바로 수정해버리는 습관 제거",
-      "source": { "date": "2026-05-20", "speaker": "user" },
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
       "immutable": true
     },
-
     "u-002": {
       "t": "user_intent",
       "quote": "문서 목적은 이걸 읽는순간 뭘 해야되는지 알아야됨",
-      "source": { "date": "2026-05-20", "speaker": "user" },
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
       "immutable": true
     },
-
     "u-003": {
       "t": "user_intent",
       "quote": "목적이 같아야됨. 초기 설정이 유지 문제 발생시 사용자랑 협의 혼자 변경금지",
-      "source": { "date": "2026-05-20", "speaker": "user" },
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
       "immutable": true
     },
-
     "a-001": {
       "t": "assumption",
       "v": "FreeLang v11로 JSON 파서 구현 가능",
-      "verify_by": ["node bootstrap.js run airc-parser.fl"],
+      "verify_by": [
+        "node bootstrap.js run airc-parser.fl"
+      ],
       "status": "pending",
       "resolved_by": null
     },
-
     "err-001": {
       "t": "error",
       "v": "FREEDOC v2 validator가 PHASES/COMMANDS/NEXT 블록 거부",
@@ -139,9 +192,103 @@
       "fix": "FIXED 블록으로 통합",
       "repeat_risk": "high",
       "note": "freedoc validate 전 블록명 사전 확인 필수"
+    },
+    "u-004": {
+      "t": "user_intent",
+      "quote": "언어 독립임. 이게 목표. 나만의 목표고 너는 동반자임. 그래서 완성을 미루고 있는거고",
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
+      "immutable": true
+    },
+    "u-005": {
+      "t": "user_intent",
+      "quote": "지금 대화는 우리서버를 너하고 이해하고 서로 협의하는거임. 단순 코드 몇줄이 중요한게 아니고 서로 문제를 논의하고 실제 해답을 찾는과정",
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
+      "immutable": true
+    },
+    "u-006": {
+      "t": "user_intent",
+      "quote": "나는 ts node js 독립임",
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
+      "immutable": true
+    },
+    "fact-001": {
+      "t": "fact",
+      "v": "FreeLang의 목표는 TS/Node.js 완전 독립. AKL은 그 언어의 실전 테스트 베드. 프로젝트 완성이 목적이 아님.",
+      "verified": true,
+      "source": "u-004",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-002": {
+      "t": "fact",
+      "v": "FreeLang v1→v11 진화의 원동력은 프로젝트가 막힐 때마다 언어를 고쳤기 때문. 프로젝트 미완성 → 언어 결함 발견 → 함수 추가/문법 수정 → v++",
+      "verified": true,
+      "source": "session-2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-003": {
+      "t": "fact",
+      "v": "서버 내 81개 프로젝트 todo 상태. 미구현이 아니라 FreeLang 의존성이 해결 안 돼서 막힌 것.",
+      "verified": true,
+      "source": "freedoc-scan-2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-004": {
+      "t": "fact",
+      "v": "AKL 40개 앱 = FreeLang 범용성 검증 도메인. AKL 전부 돌아가는 날 = FreeLang 완숙한 날.",
+      "verified": true,
+      "source": "session-2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-005": {
+      "t": "fact",
+      "v": "v11 근본 병목: sleep = Atomics.wait → 이벤트 루프 블로킹 (PAIN.fds p14). fl-yield 미구현 (YIELD-2). 이게 dclub/akl 서비스 크래시 원인.",
+      "verified": true,
+      "source": "PAIN.fds,YIELD-SEMANTICS.fds",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "err-002": {
+      "t": "error",
+      "v": "dclub 7개 서비스 287K+ 재시작 (dclub-chat, chat-bot, codegen, deployer, monitor, notes, notes-ai)",
+      "when": "2026-05-20",
+      "cause": "JS(.js) 구현 — FreeLang 독립 목표와 반대 방향. dclub-tasks만 FreeLang(.fl)으로 0회 재시작.",
+      "fix": "FreeLang으로 재구현 필요. 단 FreeLang이 해당 기능 지원할 때까지 보류.",
+      "repeat_risk": "high",
+      "note": "JS 서비스는 언어 독립 목표와 근본 충돌. 빠른 해결보다 방향 일치가 우선."
+    },
+    "dec-005": {
+      "t": "decision",
+      "v": "JS(.js) 서비스 신규 작성 금지. FreeLang이 지원하면 FreeLang으로, 못 하면 보류.",
+      "why": [
+        "JS로 만들면 언어 독립 목표와 반대",
+        "dclub 7개 서비스가 JS라서 목표 충돌 — 사용자가 멈춘 이유",
+        "dclub-tasks(FreeLang) 0재시작 vs dclub-chat(JS) 287K재시작이 증거"
+      ],
+      "verified": true,
+      "lock": true,
+      "lifecycle": {
+        "state": "active"
+      }
     }
   },
-
   "lock": [
     {
       "rule": "인간 가독성을 위한 구조 타협 금지",
@@ -174,7 +321,6 @@
       "severity": 10
     }
   ],
-
   "graveyard": [
     {
       "idea": "FREEDOC v2 블록 구조",
@@ -201,91 +347,6 @@
       "final": true
     }
   ],
-
-  "u-004": {
-    "t": "user_intent",
-    "quote": "언어 독립임. 이게 목표. 나만의 목표고 너는 동반자임. 그래서 완성을 미루고 있는거고",
-    "source": { "date": "2026-05-20", "speaker": "user" },
-    "immutable": true
-  },
-
-  "u-005": {
-    "t": "user_intent",
-    "quote": "지금 대화는 우리서버를 너하고 이해하고 서로 협의하는거임. 단순 코드 몇줄이 중요한게 아니고 서로 문제를 논의하고 실제 해답을 찾는과정",
-    "source": { "date": "2026-05-20", "speaker": "user" },
-    "immutable": true
-  },
-
-  "u-006": {
-    "t": "user_intent",
-    "quote": "나는 ts node js 독립임",
-    "source": { "date": "2026-05-20", "speaker": "user" },
-    "immutable": true
-  },
-
-  "fact-001": {
-    "t": "fact",
-    "v": "FreeLang의 목표는 TS/Node.js 완전 독립. AKL은 그 언어의 실전 테스트 베드. 프로젝트 완성이 목적이 아님.",
-    "verified": true,
-    "source": "u-004",
-    "lifecycle": { "state": "active" }
-  },
-
-  "fact-002": {
-    "t": "fact",
-    "v": "FreeLang v1→v11 진화의 원동력은 프로젝트가 막힐 때마다 언어를 고쳤기 때문. 프로젝트 미완성 → 언어 결함 발견 → 함수 추가/문법 수정 → v++",
-    "verified": true,
-    "source": "session-2026-05-20",
-    "lifecycle": { "state": "active" }
-  },
-
-  "fact-003": {
-    "t": "fact",
-    "v": "서버 내 81개 프로젝트 todo 상태. 미구현이 아니라 FreeLang 의존성이 해결 안 돼서 막힌 것.",
-    "verified": true,
-    "source": "freedoc-scan-2026-05-20",
-    "lifecycle": { "state": "active" }
-  },
-
-  "fact-004": {
-    "t": "fact",
-    "v": "AKL 40개 앱 = FreeLang 범용성 검증 도메인. AKL 전부 돌아가는 날 = FreeLang 완숙한 날.",
-    "verified": true,
-    "source": "session-2026-05-20",
-    "lifecycle": { "state": "active" }
-  },
-
-  "fact-005": {
-    "t": "fact",
-    "v": "v11 근본 병목: sleep = Atomics.wait → 이벤트 루프 블로킹 (PAIN.fds p14). fl-yield 미구현 (YIELD-2). 이게 dclub/akl 서비스 크래시 원인.",
-    "verified": true,
-    "source": "PAIN.fds,YIELD-SEMANTICS.fds",
-    "lifecycle": { "state": "active" }
-  },
-
-  "err-002": {
-    "t": "error",
-    "v": "dclub 7개 서비스 287K+ 재시작 (dclub-chat, chat-bot, codegen, deployer, monitor, notes, notes-ai)",
-    "when": "2026-05-20",
-    "cause": "JS(.js) 구현 — FreeLang 독립 목표와 반대 방향. dclub-tasks만 FreeLang(.fl)으로 0회 재시작.",
-    "fix": "FreeLang으로 재구현 필요. 단 FreeLang이 해당 기능 지원할 때까지 보류.",
-    "repeat_risk": "high",
-    "note": "JS 서비스는 언어 독립 목표와 근본 충돌. 빠른 해결보다 방향 일치가 우선."
-  },
-
-  "dec-005": {
-    "t": "decision",
-    "v": "JS(.js) 서비스 신규 작성 금지. FreeLang이 지원하면 FreeLang으로, 못 하면 보류.",
-    "why": [
-      "JS로 만들면 언어 독립 목표와 반대",
-      "dclub 7개 서비스가 JS라서 목표 충돌 — 사용자가 멈춘 이유",
-      "dclub-tasks(FreeLang) 0재시작 vs dclub-chat(JS) 287K재시작이 증거"
-    ],
-    "verified": true,
-    "lock": true,
-    "lifecycle": { "state": "active" }
-  },
-
   "session": {
     "current": {
       "model": "claude-sonnet-4.6",
