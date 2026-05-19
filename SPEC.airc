@@ -317,6 +317,74 @@
       "fix": "최상위 let 바인딩에서 직접 호출. defn 내부 shell-exec 회피.",
       "repeat_risk": "medium",
       "note": "같은 명령이 최상위에서는 정상, defn 내부에서는 빈 결과."
+    },
+    "fact-006": {
+      "t": "fact",
+      "v": "in_progress 17개 분석 결과: FreeLang 5개 vs Node.js 12개",
+      "verified": true,
+      "source": "freedoc-scan-2026-05-20",
+      "detail": {
+        "freelang": [
+          "dclub-chat",
+          "dclub-notes-ai",
+          "akl-writer",
+          "dclub-notes",
+          "evolution-control-tower"
+        ],
+        "nodejs": [
+          "kim-jira",
+          "akl-note",
+          "reminder-bot",
+          "todo-app-v2",
+          "freelang-ghost-writer",
+          "task-scheduler",
+          "akl-calendar",
+          "akl-bookmark",
+          "akl-habit",
+          "time-tracker",
+          "akl-mindmap",
+          "freedoc"
+        ]
+      },
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-007": {
+      "t": "fact",
+      "v": "in_progress Node.js 12개는 실질적으로 보류 상태. blocker 필드 none으로 기록됐지만 실제 원인은 dec-005 — JS 구현이라 목표와 충돌해 멈춘 것.",
+      "verified": true,
+      "source": "fact-006",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-008": {
+      "t": "fact",
+      "v": "FREEDOC blocker 필드가 대부분 none 또는 미기재 — 실제 막힌 이유가 기록 안 됨. AIRC err 노드가 이를 보완해야 함.",
+      "verified": true,
+      "source": "freedoc-scan-2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "err-006": {
+      "t": "error",
+      "v": "FREEDOC blocker 필드 미기재 관행 — 왜 멈췄는지 추적 불가",
+      "when": "2026-05-20",
+      "cause": "FREEDOC 작성 시 blocker 필드를 none으로 기본 입력. 실제 blocking 원인 미기록.",
+      "fix": "앞으로 막히면 AIRC err 노드로 원인 기록. FREEDOC blocker는 단순 상태, AIRC가 인과관계 담당.",
+      "repeat_risk": "high",
+      "note": "in_progress 17개 중 blocker 명시된 것 0개. 전부 none."
+    },
+    "err-007": {
+      "t": "error",
+      "v": "in_progress Node.js 12개 — dec-005 위반 상태로 방치",
+      "when": "2026-05-20",
+      "cause": "JS로 init/server running 상태에서 멈춤. FreeLang 독립 목표와 충돌. 재작성 시점 미정.",
+      "fix": "FreeLang이 해당 기능 지원할 때까지 공식 보류 처리. AIRC에 blocked_by=freelang_limitation 기록.",
+      "repeat_risk": "medium",
+      "note": "목록: kim-jira, akl-note, reminder-bot, todo-app-v2, freelang-ghost-writer, task-scheduler, akl-calendar, akl-bookmark, akl-habit, time-tracker, akl-mindmap, freedoc"
     }
   },
   "lock": [
@@ -386,14 +454,13 @@
     "handoff": [
       "핵심 목표: FreeLang TS/Node.js 완전 독립 (u-004, u-006)",
       "AKL = FreeLang 테스트 베드. 프로젝트 완성 목적 아님 (fact-001)",
-      "81개 todo = 언어 의존성 막힘. 미구현이 아님 (fact-003)",
+      "in_progress 17개 분석 완료: FreeLang 5개 진행중 / Node.js 12개 보류 (fact-006, fact-007)",
+      "Node.js 12개는 dec-005 위반 — JS라 목표 충돌. FreeLang 지원 시까지 공식 보류 (err-007)",
+      "FREEDOC blocker 필드 미기재 관행 발견 — AIRC가 인과관계 담당 (fact-008, err-006)",
+      "FreeLang in_progress 5개: dclub-chat, dclub-notes-ai, akl-writer, dclub-notes, evolution-control-tower",
       "v11 병목: fl-yield 미구현(YIELD-2) + sleep 블로킹 (fact-005)",
-      "JS 서비스 금지 결정 — dec-005 lock:true",
-      "scan-blockers.fl: 79개 FREEDOC 스캔 완료. blocker 필드 미기재가 문제.",
-      "err-003: shell-exec 공백 경로 버그 → shell-exec-result 사용",
-      "err-004: check-parens.py 이스케이프 따옴표 오계산 버그",
-      "err-005: defn 내부 shell-exec 빈 결과 버그",
-      "AIRC task-001~003 완료. scan-blockers.fl 추가"
+      "shell-exec 버그 3개 발견 → PAIN.fds p15/p16/p17 추가 완료 (err-003~005)",
+      "AIRC task-001~003 완료. scan-blockers.fl 작동 (79개 스캔)"
     ]
   }
 }
