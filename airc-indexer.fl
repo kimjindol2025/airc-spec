@@ -142,7 +142,7 @@
                 "index-size" (str (/ (* $token-count 150) 1024) "KB est.")
               }
               "index" $index
-              "search-example" (search-index $index "yield")
+              "search-example" (search-index $index "task")
             }
               $json (json-stringify $output-json)]
           (file-write INDEX-PATH $json)
@@ -158,8 +158,8 @@
           (println (str "   고유 토큰: " $token-count))
           (println (str "   평균 토큰/문서: " (str (round (/ (* $token-count 1.0) $doc-count)) " 단어")))
           (println "")
-          (println (str "🔍 검색 예시 (yield):"))
-          (let [$search-result (search-index $index "yield")]
+          (println (str "🔍 검색 예시 (task):"))
+          (let [$search-result (search-index $index "task")]
             (println (str "   일치 문서: " (get $search-result "matches")))
             (let [$top-results (take 3 (get $search-result "results"))]
               (doseq [$entry $top-results]

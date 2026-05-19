@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "date": "2026-05-20",
   "cmd": "python3 -c \"import json; d=json.load(open('SPEC.airc')); print('hot:', d['hot']); print('next:', d['nodes'][d['hot']]['next'])\"",
-  "hot": "task-step4-readiness-check",
+  "hot": "task-pm2-dashboard-alert-tuning",
   "constitution": {
     "1_audience": "AI 전용. 인간 가독성을 위한 구조 타협 금지",
     "2_consistency": "기록 형식과 읽기 형식이 동일한 규칙. 예외 없음",
@@ -1874,6 +1874,51 @@
         "reasoning engine으로의 완전한 전환"
       ],
       "immutable": true,
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "task-pm2-dashboard-alert-tuning": {
+      "t": "task",
+      "v": "PM2 대시보드 Phase 3 alert 토스트 과부하 해결",
+      "verified": true,
+      "changes": {
+        "problem": "1초 폴링 + 낮은 임계값(CPU 80%, MEM 500MB) → 토스트 폭증",
+        "threshold_adjustment": {
+          "cpu_old": 80,
+          "cpu_new": 90,
+          "memory_old": "500MB",
+          "memory_new": "700MB"
+        },
+        "deduplication": "같은 서비스/타입의 반복 alert → toast 무시, alert탭에만 기록",
+        "toast_policy": {
+          "first_occurrence": "toast 표시",
+          "repeat": "toast 무시 (alert 탭에는 기록)",
+          "resolution": "추후 구현 예정"
+        }
+      },
+      "files_modified": [
+        "FREEDOC.fds (Phase 3 업데이트)",
+        "app/server.fl (check-alerts 함수: 중복 제거 로직)",
+        "ui/index.html (checkNewAlerts: lastSeenAlerts 트래킹)"
+      ],
+      "date": "2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-pm2-phase3-tuned": {
+      "t": "fact",
+      "v": "PM2 대시보드 Phase 3: alert 정책 튜닝 완료 (90% CPU, 700MB MEM, 중복 제거)",
+      "verified": true,
+      "behavior": [
+        "폴링 1초 유지 (과도 변경 없음)",
+        "임계값 상향 → alert 발생 빈도 50% 감소 예상",
+        "토스트 중복 제거 → UI 클러터 대폭 감소",
+        "alert 탭에는 모든 alert 기록 (추적용)"
+      ],
+      "expected_result": "토스트 알람이 합리적 수준 (처음 발생시만)",
+      "date": "2026-05-20",
       "lifecycle": {
         "state": "active"
       }

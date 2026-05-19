@@ -1,0 +1,111 @@
+;; airc-search.fl — Full text search (토큰 기반 노드 검색)
+;; 입력: query (검색어)
+;; 출력: 매칭된 노드들 (점수 순)
+
+(define INDEX-PATH "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/full-text-index.json")
+(define GRAPH-PATH "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/airc-graph.json")
+
+;; --- 유틸리티 ---
+
+(defn tokenize [$text]
+  "검색어를 토큰으로 분해"
+  (let [$tokens (str-split $text " ")]
+    (filter (fn [$t] (and (not (empty? $t)) (> (length $t) 1))) $tokens)))
+
+(defn search-index [$index $query]
+  "Full text 검색 (토큰 매칭)"
+  (let [$tokens (tokenize $query)
+        $results (atom {})]
+
+    ;; 각 토큰별 매칭 노드 수집
+    (doseq [$token $tokens]
+      (let [$matches (get $index $token [])]
+        (doseq [$match $matches]
+          (let [$node-id (get $match "node-id")]
+            (swap! $results
+              (fn [$r]
+                (let [$current-score (get $r $node-id 0)]
+                  (assoc $r $node-id (+ $current-score 1)))))))))
+
+    ;; 점수 기준 정렬 (내림차순)
+    (let [$sorted (sort-by (fn [$entry]
+                            (let [$node-id (first $entry)
+                                  $score (second $entry)]
+                              (- $score)))
+                          (map (fn [$k] [$k (get (deref $results) $k)]) (keys (deref $results))))]
+      {
+        "query" $query
+        "total_matches" (length $sorted)
+        "results" (map (fn [$entry]
+                        {
+                          "node-id" (first $entry)
+                          "score" (second $entry)
+                        })
+                       (take 50 $sorted))
+      })))
+
+(defn enrich-results [$search-result $graph]
+  "검색 결과에 노드 정보 추가"
+  (let [$nodes (get $graph "nodes" {})
+        $results (get $search-result "results" [])
+        $enriched (map (fn [$result]
+                        (let [$node-id (get $result "node-id")
+                              $node (get $nodes $node-id {})]
+                          {
+                            "node-id" $node-id
+                            "node-type" (get $node "t" "unknown")
+                            "node-value" (get $node "v" "")
+                            "score" (get $result "score")
+                            "tags" (get $node "tags" [])
+                          }))
+                       $results)]
+    {
+      "query" (get $search-result "query")
+      "total_matches" (get $search-result "total_matches")
+      "results" $enriched
+    }))
+
+;; --- 퍼블릭 API ---
+
+(defn airc-search [$query]
+  "AIRC 검색 실행 (외부 호출용)"
+  (println "🔍 AIRC Search 시작...")
+  (println (str "   검색어: \"" $query "\""))
+  (println "")
+
+  ;; 인덱스 로드
+  (println "📖 인덱스 로드...")
+  (let [$index-content (file-read INDEX-PATH)]
+    (if (nil? $index-content)
+      (do
+        (println "❌ 인덱스 로드 실패")
+        nil)
+      (let [$index-data (json-parse $index-content)
+            $index (get $index-data "index" {})]
+        (println "✅ 인덱스 로드 완료")
+
+        ;; 검색 실행
+        (println "🔎 검색 중...")
+        (let [$search-result (search-index $index $query)]
+          (println (str "✅ 검색 완료 — " (get $search-result "total_matches") " 매칭"))
+          (println "")
+
+          ;; 그래프 로드 (결과 보강용)
+          (println "📊 결과 보강 중...")
+          (let [$graph-content (file-read GRAPH-PATH)]
+            (if (nil? $graph-content)
+              (do
+                (println "⚠️  그래프 로드 실패, 기본 결과 반환")
+                $search-result)
+              (let [$graph (json-parse $graph-content)
+                    $enriched (enrich-results $search-result $graph)]
+                (println (str "✅ 보강 완료"))
+                (println "")
+                $enriched))))))))
+
+;; --- 메인 (CLI 모드) ---
+
+(println "🔍 AIRC Search (test mode)")
+(let [$test-result (airc-search "task")]
+  (if (not (nil? $test-result))
+    (println (json-stringify $test-result))))
