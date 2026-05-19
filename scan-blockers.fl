@@ -1,0 +1,61 @@
+;; scan-blockers.fl — FREEDOC.fds 전체 스캔 + status/blocker 집계
+;; 발견된 FreeLang 한계: shell-exec 인자가 길면 빈 결과 반환 (버그)
+;; 우회: 경로별 개별 호출 후 합산
+
+(define ROOTS [
+  "/home/kimjin/kim/Desktop/kim/01_Active_Projects"
+  "/home/kimjin/kim/Desktop/kim/02_Infrastructure"
+  "/home/kimjin/services"
+  "/home/kimjin/freelang-v11"
+])
+
+(defn get-field [$content $key]
+  (let [$line (find-first
+                (fn [$l] (str-includes $l $key))
+                (str-lines $content))]
+    (if (nil? $line)
+      "unknown"
+      (let [$idx (str-index-of $line ":")]
+        (str-trim (str-slice $line (+ $idx 1) (length $line)))))))
+
+(defn inc-map [$m $k]
+  (assoc $m $k (+ (if (nil? (get $m $k)) 0 (get $m $k)) 1)))
+
+(defn collect-files [$roots]
+  (let [$acc (atom [])]
+    (doseq [$root $roots]
+      (let [$res   (shell-exec-result (str "find " $root " -name FREEDOC.fds 2>/dev/null"))
+            $out   (get $res "stdout")
+            $lines (filter (fn [$l] (not (str-blank? $l))) (str-lines $out))]
+        (swap! $acc (fn [$a] (into $a $lines)))))
+    (deref $acc)))
+
+(let [$files    (collect-files ROOTS)
+      $stats    (atom {})
+      $blockers (atom {})]
+
+  (doseq [$path $files]
+    (let [$content (file-read $path)]
+      (when (not (nil-or-empty? $content))
+        (let [$status  (str-trim (get-field $content "status:"))
+              $blocker (str-trim (get-field $content "blocker:"))]
+          (swap! $stats (fn [$m] (inc-map $m $status)))
+          (when (and
+                  (not (= $blocker "none"))
+                  (not (= $blocker "unknown"))
+                  (not (str-blank? $blocker)))
+            (swap! $blockers (fn [$m] (inc-map $m $blocker))))))))
+
+  (println (str "FREEDOC.fds 총: " (str (length $files)) "개"))
+  (println "")
+  (println "=== STATUS ===")
+  (doseq [$k (keys (deref $stats))]
+    (println (str "  " $k ": " (str (get (deref $stats) $k)))))
+
+  (println "")
+  (println "=== BLOCKERS ===")
+  (let [$b (deref $blockers)]
+    (if (empty? (keys $b))
+      (println "  (명시된 blocker 없음)")
+      (doseq [$k (keys $b)]
+        (println (str "  [" (str (get $b $k)) "개] " $k))))))

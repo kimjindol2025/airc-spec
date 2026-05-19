@@ -290,6 +290,33 @@
       "lifecycle": {
         "state": "active"
       }
+    },
+    "err-003": {
+      "t": "error",
+      "v": "shell-exec: 공백 포함 경로에서 빈 결과 반환",
+      "when": "2026-05-20",
+      "cause": "execSync(cmd) 직접 호출 — sh -c 없이 tokenization → 공백 경로 분리됨",
+      "fix": "shell-exec-result 사용 (spawnSync sh -c 방식). shell-exec는 공백 없는 단순 명령만 사용.",
+      "repeat_risk": "high",
+      "note": "find /path/with spaces → 실패. shell-exec-result는 정상 작동."
+    },
+    "err-004": {
+      "t": "error",
+      "v": "check-parens.py: 이스케이프 따옴표 내부를 괄호로 카운트",
+      "when": "2026-05-20",
+      "cause": "문자열 내 '\"' 처리 시 파서가 괄호 균형 오계산",
+      "fix": "이스케이프 따옴표 대신 변수 우회 또는 다른 방법으로 특수문자 처리",
+      "repeat_risk": "medium",
+      "note": "(str-replace-all x '\"' '') 패턴에서 발생. check-parens.py 버그."
+    },
+    "err-005": {
+      "t": "error",
+      "v": "shell-exec: 함수 정의 내부에서 호출 시 빈 결과",
+      "when": "2026-05-20",
+      "cause": "defn 안에서 shell-exec 호출 시 cwd 컨텍스트가 달라지는 것으로 추정. 정확한 원인 미확인.",
+      "fix": "최상위 let 바인딩에서 직접 호출. defn 내부 shell-exec 회피.",
+      "repeat_risk": "medium",
+      "note": "같은 명령이 최상위에서는 정상, defn 내부에서는 빈 결과."
     }
   },
   "lock": [
@@ -362,9 +389,11 @@
       "81개 todo = 언어 의존성 막힘. 미구현이 아님 (fact-003)",
       "v11 병목: fl-yield 미구현(YIELD-2) + sleep 블로킹 (fact-005)",
       "JS 서비스 금지 결정 — dec-005 lock:true",
-      "dclub 7개 서비스 287K 재시작 = JS 구현 문제 (err-002)",
-      "AIRC 목적: 이 여정을 다음 Claude도 이해하게 보존",
-      "task-001: airc-parser.fl 미구현"
+      "scan-blockers.fl: 79개 FREEDOC 스캔 완료. blocker 필드 미기재가 문제.",
+      "err-003: shell-exec 공백 경로 버그 → shell-exec-result 사용",
+      "err-004: check-parens.py 이스케이프 따옴표 오계산 버그",
+      "err-005: defn 내부 shell-exec 빈 결과 버그",
+      "AIRC task-001~003 완료. scan-blockers.fl 추가"
     ]
   }
 }
