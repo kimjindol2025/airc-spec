@@ -1,0 +1,132 @@
+;; fds-to-airc.fl — FREEDOC.fds → .airc 변환 도구
+;; 사용법: node bootstrap.js run fds-to-airc.fl <path/to/FREEDOC.fds>
+;; 출력:  <path/to/FREEDOC.airc>
+
+;; --- FREEDOC 파서 ---
+
+(defn parse-value [$raw]
+  (let [$s (str-trim $raw)]
+    (cond
+      ;; 큰따옴표 문자열
+      (str-starts-with $s "\"")
+        (str-replace-all (str-replace-all $s "\"" "") "\\" "")
+      ;; none / null → nil 표현
+      (= $s "none") "none"
+      (= $s "null") "none"
+      :else $s)))
+
+(defn parse-fds [$content]
+  (let [$lines  (str-lines $content)
+        $result (atom {})]
+    (let [$cur-block (atom nil)]
+      (doseq [$line $lines]
+        (let [$l (str-trim $line)]
+          (cond
+            ;; 블록 시작: BLOCKNAME {
+            (and (str-ends-with $l "{") (not (str-starts-with $l ";")))
+              (let [$bname (str-trim (str-replace $l "{" ""))]
+                (swap! $cur-block (fn [$_] $bname))
+                (when (not (nil? $bname))
+                  (swap! $result (fn [$r] (assoc $r $bname {})))))
+            ;; 블록 끝
+            (= $l "}")
+              (swap! $cur-block (fn [$_] nil))
+            ;; key: value 파싱
+            (and (not (nil? (deref $cur-block)))
+                 (str-includes $l ":"))
+              (let [$idx   (str-index-of $l ":")
+                    $k     (str-trim (str-slice $l 0 $idx))
+                    $v     (parse-value (str-slice $l (+ $idx 1) (length $l)))]
+                (when (and (not (str-blank? $k)) (not (str-starts-with $k ";")))
+                  (swap! $result
+                    (fn [$r]
+                      (let [$block (get $r (deref $cur-block))]
+                        (assoc $r (deref $cur-block) (assoc $block $k $v)))))))))))
+    (deref $result)))
+
+;; --- AIRC 노드 생성 ---
+
+(defn make-airc [$fds $src-path]
+  (let [$identity (get $fds "IDENTITY")
+        $position (get $fds "POSITION")
+        $fixed    (get $fds "FIXED")
+        $failure  (get $fds "FAILURE")
+        $next-blk (get $fds "NEXT")
+
+        $what     (if (nil? $identity) "unknown" (get $identity "what"))
+        $status   (if (nil? $position) "todo"    (get $position "status"))
+        $current  (if (nil? $position) ""        (get $position "current"))
+        $blocker  (if (nil? $position) "none"    (get $position "blocker"))
+        $port     (if (nil? $fixed)    "none"    (get $fixed "port"))
+
+        ;; task 노드
+        $task-id  (str "task-" $what)
+        $task-node {
+          "t"        "task"
+          "v"        (str $what " — " $current)
+          "verified" false
+          "next"     []
+          "blocked_by" (if (= $blocker "none") nil $blocker)
+          "status"   $status
+        }
+
+        ;; port fact 노드 (포트 있으면)
+        $port-node (when (and (not (nil? $port)) (not (= $port "none")))
+                     {
+                       "t"        "fact"
+                       "v"        (str $what " 포트: " $port)
+                       "verified" true
+                       "source"   "FREEDOC.fds"
+                       "lifecycle" {"state" "active"}
+                     })
+
+        ;; failure → err 노드
+        $err-node  (when (not (nil? $failure))
+                     {
+                       "t"           "error"
+                       "v"           (str $what " — FREEDOC failure 기록")
+                       "cause"       (get $failure "cause")
+                       "fix"         (get $failure "fix")
+                       "repeat_risk" "medium"
+                     })
+
+        ;; nodes 조립
+        $nodes (atom {"task-001" $task-node})
+    ]
+
+    (when (not (nil? $port-node))
+      (swap! $nodes (fn [$n] (assoc $n (str "fact-port-" $what) $port-node))))
+    (when (not (nil? $err-node))
+      (swap! $nodes (fn [$n] (assoc $n (str "err-" $what) $err-node))))
+
+    {
+      "$"       "airc"
+      "version" "0.1.0"
+      "source"  $src-path
+      "hot"     "task-001"
+      "nodes"   (deref $nodes)
+      "lock"    []
+      "graveyard" []
+      "session" {
+        "current"  {"date" "2026-05-20"}
+        "handoff"  [(str "출처: " $src-path) (str "status: " $status) (str "blocker: " $blocker)]
+      }
+    }))
+
+;; --- 진입점 ---
+
+(let [$argv    (process-argv)
+      $src     (if (> (length $argv) 2) (nth $argv 2) nil)]
+  (if (nil? $src)
+    (println "사용법: node bootstrap.js run fds-to-airc.fl <FREEDOC.fds 경로>")
+    (let [$raw (file-read $src)]
+      (if (nil-or-empty? $raw)
+        (println (str "ERROR: 파일 없음 — " $src))
+        (let [$fds    (parse-fds $raw)
+              $airc   (make-airc $fds $src)
+              $out    (str-replace $src ".fds" ".airc")
+              $json   (json-stringify $airc)]
+          (file-write $out $json)
+          (println (str "✅ 변환 완료: " $out))
+          (println (str "   hot: " (get $airc "hot")))
+          (println (str "   nodes: " (str (length (keys (get $airc "nodes")))))))))))

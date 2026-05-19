@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "date": "2026-05-20",
   "cmd": "python3 -c \"import json; d=json.load(open('SPEC.airc')); print('hot:', d['hot']); print('next:', d['nodes'][d['hot']]['next'])\"",
-  "hot": "task-002",
+  "hot": "task-003",
   "constitution": {
     "1_audience": "AI 전용. 인간 가독성을 위한 구조 타협 금지",
     "2_consistency": "기록 형식과 읽기 형식이 동일한 규칙. 예외 없음",
@@ -97,9 +97,12 @@
     "task-002": {
       "t": "task",
       "v": "CLI 구현: airc read / airc why / airc graveyard / airc next",
-      "verified": false,
+      "verified": true,
       "next": [
         "task-003"
+      ],
+      "entry": [
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc.fl"
       ]
     },
     "task-003": {
