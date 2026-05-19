@@ -241,6 +241,76 @@
               (when (not (empty? $causes))
                 (println (str "  causes: " (str $causes)))))))))))
 
+;; ── blocked_by ranking ───────────────────────────────────────────────────────
+;; FREEDOC.fds의 blocker 필드를 스캔해 FreeLang 한계별 차단 프로젝트 수 집계
+
+(define BLOCKER_ROOTS [
+  "/home/kimjin/kim/Desktop/kim/01_Active_Projects"
+  "/home/kimjin/kim/Desktop/kim/02_Infrastructure"
+  "/home/kimjin/services"
+  "/home/kimjin/freelang-v11"
+])
+
+(defn get-blocker-from-fds [$content]
+  (let [$line (find-first
+                (fn [$l] (str-includes $l "blocker:"))
+                (str-lines $content))]
+    (if (nil? $line)
+      nil
+      (let [$idx (str-index-of $line ":")]
+        (str-trim (str-slice $line (+ $idx 1) (length $line)))))))
+
+(defn collect-fds-files [$roots]
+  (let [$acc (atom [])]
+    (doseq [$root $roots]
+      (let [$res   (shell-exec-result (str "find " $root " -name FREEDOC.fds 2>/dev/null"))
+            $out   (get $res "stdout")
+            $lines (filter (fn [$l] (not (str-blank? $l))) (str-lines $out))]
+        (swap! $acc (fn [$a] (into $a $lines)))))
+    (deref $acc)))
+
+(defn print-blockers [$spec]
+  (println "=== BLOCKED_BY RANKING ===")
+  (println "(FREEDOC.fds blocker 필드 집계 — 비어있으면 AIRC err 노드로 보완 필요)")
+  (println "")
+  (let [$files    (collect-fds-files BLOCKER_ROOTS)
+        $counts   (atom {})
+        $total    (atom 0)
+        $no-blocker (atom 0)]
+
+    (doseq [$path $files]
+      (let [$content (file-read $path)]
+        (when (not (nil-or-empty? $content))
+          (swap! $total (fn [$n] (+ $n 1)))
+          (let [$blocker (get-blocker-from-fds $content)]
+            (if (or (nil? $blocker)
+                    (= $blocker "none")
+                    (str-blank? $blocker))
+              (swap! $no-blocker (fn [$n] (+ $n 1)))
+              (let [$cur (get (deref $counts) $blocker)]
+                (swap! $counts (fn [$m]
+                  (assoc $m $blocker (+ (if (nil? $cur) 0 $cur) 1))))))))))
+
+    (println (str "스캔: " (str (deref $total)) "개 FREEDOC.fds"))
+    (println (str "blocker 없음/none: " (str (deref $no-blocker)) "개"))
+    (println "")
+
+    (let [$bmap (deref $counts)]
+      (if (empty? (keys $bmap))
+        (do
+          (println "명시된 blocker 없음.")
+          (println "→ AIRC err 노드에서 대신 추출 가능:")
+          (println "")
+          (let [$nodes (get $spec "nodes")]
+            (doseq [$nid (keys $nodes)]
+              (let [$n (get $nodes $nid)]
+                (when (= (get $n "t") "error")
+                  (println (str "  [" $nid "] " (get $n "v"))))))))
+        (do
+          (println "── 차단 순위 (많은 것 → 먼저 고쳐야 함) ──")
+          (doseq [$k (keys $bmap)]
+            (println (str "  [" (str (get $bmap $k)) "개] " $k))))))))
+
 ;; ── 진입점 ───────────────────────────────────────────────────────────────────
 
 (let [$argv (process-argv)
@@ -273,4 +343,5 @@
                              (println "사용법: airc causes <node-id>")
                              (print-causes $spec $arg1))
       (= $cmd "graph")     (print-graph $spec)
+      (= $cmd "blockers")  (print-blockers $spec)
       :else                (print-status $spec))))

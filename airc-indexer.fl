@@ -1,0 +1,168 @@
+;; airc-indexer.fl — Full text index 생성
+;; 입력: airc-graph.json
+;; 출력: data/full-text-index.json
+
+(define GRAPH-PATH "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/airc-graph.json")
+(define INDEX-PATH "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/full-text-index.json")
+
+;; --- 유틸리티 ---
+
+(defn tokenize [$text]
+  "텍스트를 단어로 분해 (공백으로 분해, 1글자 필터링)"
+  (let [$tokens (str-split $text " ")]
+    (filter (fn [$t] (and (not (empty? $t)) (> (length $t) 1))) $tokens)))
+
+(defn extract-text [$node]
+  "노드에서 모든 텍스트 추출"
+  (let [$parts (atom [])]
+    ;; 주요 필드들
+    (when (not (nil? (get $node "v")))
+      (swap! $parts (fn [$p] (concat $p [(str (get $node "v"))]))))
+    (when (not (nil? (get $node "t")))
+      (swap! $parts (fn [$p] (concat $p [(str (get $node "t"))]))))
+    (when (not (nil? (get $node "cause")))
+      (swap! $parts (fn [$p] (concat $p [(str (get $node "cause"))]))))
+    (when (not (nil? (get $node "fix")))
+      (swap! $parts (fn [$p] (concat $p [(str (get $node "fix"))]))))
+    (when (not (nil? (get $node "why")))
+      (let [$why (get $node "why")]
+        (if (array? $why)
+          (doseq [$w $why]
+            (swap! $parts (fn [$p] (concat $p [(str $w)]))))
+          (swap! $parts (fn [$p] (concat $p [(str $why)]))))))
+    (when (not (nil? (get $node "quote")))
+      (swap! $parts (fn [$p] (concat $p [(str (get $node "quote"))]))))
+
+    (str-join " " (deref $parts))))
+
+;; --- 인덱스 생성 ---
+
+(defn build-full-text-index [$graph]
+  "Full text index 생성"
+  (let [$nodes (get $graph "nodes" {})
+        $index (atom {})
+        $doc-count (atom 0)]
+
+    (println "🔍 Full text index 생성 중...")
+
+    (doseq [$node-id (keys $nodes)]
+      (swap! $doc-count (fn [$c] (+ $c 1)))
+      (let [$node (get $nodes $node-id)
+            $text (extract-text $node)
+            $tokens (tokenize $text)]
+
+        ;; 각 토큰별로 노드 매핑
+        (doseq [$token $tokens]
+          (swap! $index
+            (fn [$idx]
+              (let [$existing (get $idx $token [])
+                    $new-entry {
+                      "node-id" $node-id
+                      "node-type" (get $node "t")
+                      "score" 1.0
+                    }
+                    $updated (if (empty? $existing)
+                              [$new-entry]
+                              (concat $existing [$new-entry]))]
+                (assoc $idx $token $updated)))))))
+
+    {
+      "index" (deref $index)
+      "doc-count" (deref $doc-count)
+      "token-count" (count (keys (deref $index)))
+    }))
+
+;; --- 검색 함수 (미리보기) ---
+
+(defn search-index [$index $query]
+  "Full text search"
+  (let [$tokens (tokenize $query)
+        $results (atom {})
+        $found-docs (atom [])]
+
+    (doseq [$token $tokens]
+      (let [$docs (get $index $token [])]
+        (doseq [$doc $docs]
+          (let [$node-id (get $doc "node-id")]
+            (swap! $found-docs (fn [$s] (concat $s [$node-id])))
+            (swap! $results
+              (fn [$r]
+                (let [$current (get $r $node-id 0)]
+                  (assoc $r $node-id (+ $current 1)))))))))
+
+    ;; 점수 내림차순 정렬
+    (let [$sorted (sort-by (fn [$entry]
+                            (let [$node-id (first $entry)
+                                  $score (second $entry)]
+                              (- $score)))
+                          (deref $results))]
+      {
+        "query" $query
+        "matches" (length (deref $found-docs))
+        "results" $sorted
+      })))
+
+;; --- 메인 ---
+
+(println "🔄 AIRC Indexer 시작...")
+(println "")
+
+;; 그래프 로드
+(println "📖 airc-graph.json 로드...")
+(let [$graph-content (file-read GRAPH-PATH)]
+  (if (nil? $graph-content)
+    (do
+      (println "❌ airc-graph.json 로드 실패")
+      (process-exit 1))
+    (let [$graph (json-parse $graph-content)]
+      (println "✅ 로드 완료")
+
+      ;; 인덱스 생성
+      (println "")
+      (println "🔍 Full text index 생성...")
+      (let [$result (build-full-text-index $graph)
+            $index (get $result "index")
+            $doc-count (get $result "doc-count")
+            $token-count (get $result "token-count")]
+
+        (println (str "✅ 인덱스 생성 완료"))
+        (println (str "   문서: " $doc-count))
+        (println (str "   토큰: " $token-count))
+        (println "")
+
+        ;; 인덱스 저장
+        (println "💾 인덱스 저장...")
+        (let [$output-json {
+              "$" "airc-full-text-index"
+              "version" "0.1.0"
+              "generated" (now-iso)
+              "stats" {
+                "doc-count" $doc-count
+                "token-count" $token-count
+                "index-size" (str (/ (* $token-count 150) 1024) "KB est.")
+              }
+              "index" $index
+              "search-example" (search-index $index "yield")
+            }
+              $json (json-stringify $output-json)]
+          (file-write INDEX-PATH $json)
+          (println (str "✅ 저장 완료: " INDEX-PATH))
+          (println "")
+
+          ;; 요약
+          (println "════════════════════════════════════════")
+          (println "✅ AIRC Indexer 완료")
+          (println "════════════════════════════════════════")
+          (println (str "📊 인덱스 통계:"))
+          (println (str "   문서(노드): " $doc-count))
+          (println (str "   고유 토큰: " $token-count))
+          (println (str "   평균 토큰/문서: " (str (round (/ (* $token-count 1.0) $doc-count)) " 단어")))
+          (println "")
+          (println (str "🔍 검색 예시 (yield):"))
+          (let [$search-result (search-index $index "yield")]
+            (println (str "   일치 문서: " (get $search-result "matches")))
+            (let [$top-results (take 3 (get $search-result "results"))]
+              (doseq [$entry $top-results]
+                (println (str "      - " (first $entry) ": " (second $entry) " match")))))
+          (println "")
+          (println (str "📍 출력: " INDEX-PATH)))))))

@@ -1,1 +1,2710 @@
-{"$":"airc-spec","version":"0.1.0","date":"2026-05-20","cmd":"python3 -c \"import json; d=json.load(open('SPEC.airc')); print('hot:', d['hot']); print('next:', d['nodes'][d['hot']]['next'])\"","hot":"task-004-airc-engine-mvp","constitution":{"1_audience":"AI 전용. 인간 가독성을 위한 구조 타협 금지","2_consistency":"기록 형식과 읽기 형식이 동일한 규칙. 예외 없음","3_purpose_lock":"초기 설계 목적은 잠긴다. 변경은 사용자 협의 후에만. Claude 단독 변경 금지","4_error_log":"실수, 오류, 반복 패턴도 nodes에 기록. 성공만 기록하지 않는다","5_verified_only":"검증된 사실만 fact 타입. 추측은 assumption으로 분리","6_handoff":"hot + next + lock + graveyard + session.handoff 가 다음 Claude 인수인계 전부","7_append_only":"노드는 삭제하지 않는다. lifecycle.state=void 로만 무효화","8_lock_requires_why":"why 없는 lock 등록 불가. 이유 모르는 금지는 다음 Claude가 무시한다","9_session_minimal":"세션 기록은 current + handoff 만. 전체 로그는 외부 파일로 분리","10_assumption_lifecycle":"assumption은 검증 후 resolved_by 로 fact 연결 필수","11_user_intent_immutable":"사용자 발언은 quote 필드에 원문 보존. 요약/해석 금지. immutable:true"},"node_types":{"problem":"현재 문제 — 해결 전까지 hot 가능","task":"다음 행동 — entry + check + verified 필수","decision":"구조 결정 — why 필수. lock:true 가능","fact":"검증된 사실 — verified:true 필수","assumption":"검증 전 가정 — verify_by 필수. status:pending","error":"실패 기록 — cause + fix + repeat_risk 필수","user_intent":"사용자 원문 — quote 필드. immutable:true 필수"},"field_rules":{"all_nodes":["t","v"],"task":["entry","check","verified","next"],"decision":["why","verified"],"fact":["verified:true"],"assumption":["verify_by","status"],"error":["cause","fix","repeat_risk"],"user_intent":["quote","source","immutable:true"],"lock_item":["rule","why","source","severity"],"lifecycle":["state","by","at"]},"lifecycle_states":["active","void","deprecated","superseded","experimental","frozen"],"nodes":{"task-001":{"t":"task","v":"SPEC.airc 확정 및 airc-parser.fl 구현","entry":["/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc","/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc-parser.fl"],"check":["node /home/kimjin/freelang-v11/bootstrap.js run airc-parser.fl"],"verified":true,"next":["task-002"],"tags":["airc","spec","design"],"provenance":{"from":["u-001"],"causes":["task-002","task-003"],"session":"2026-05-20"},"deps":{"needs":[],"blocks":["task-002","task-003"]},"lifecycle":{"state":"active","since":"2026-05-20"}},"task-002":{"t":"task","v":"CLI 구현: airc read / airc why / airc graveyard / airc next","verified":true,"next":["task-003"],"entry":["/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc.fl"],"tags":["airc","cli","freelang"],"provenance":{"from":["task-001","u-001"],"causes":[],"session":"2026-05-20"},"deps":{"needs":["task-001"],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"task-003":{"t":"task","v":"FREEDOC.fds → .airc 마이그레이션 도구 (fds-to-airc.fl) 검증 및 70개 파일 변환 완료","verified":true,"next":["task-004-airc-engine-mvp"],"tags":["airc","freedoc","converter","freelang"],"provenance":{"from":["task-001","u-002"],"causes":[],"session":"2026-05-20"},"deps":{"needs":["task-001"],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"},"status":"complete","check":["find /home/kimjin/kim/Desktop/kim/01_Active_Projects -name FREEDOC.airc | wc -l"]},"dec-001":{"t":"decision","v":"포맷은 JSON. transport layer. 본질은 AI State Graph","why":["파싱 100% 확실","타입 명확","추론 불필요","validator 구현 가능"],"verified":true,"lock":true,"lifecycle":{"state":"active"},"tags":["airc","append-only","immutability"],"provenance":{"from":["u-001"],"causes":[],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]}},"dec-002":{"t":"decision","v":"append-only. 노드 삭제 금지. lifecycle.state=void 로만 무효화","why":["삭제하면 왜 폐기됐는지 증발","회귀 방지 실패","과거 결정 인과 붕괴"],"verified":true,"lock":true,"lifecycle":{"state":"active"},"tags":["freelang","language-design","nodejs"],"provenance":{"from":["u-004","fact-003"],"causes":["dec-005","err-007"],"session":"2026-05-20"},"deps":{"needs":["fact-003"],"blocks":["dec-005"]}},"dec-003":{"t":"decision","v":"replaces 필드로 canonical 노드 명시","why":["AI는 무엇이 현재 유효한지 즉시 알아야 함"],"verified":true,"lifecycle":{"state":"active"},"tags":["airc","graveyard","design"],"provenance":{"from":["u-001"],"causes":[],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]}},"u-001":{"t":"user_intent","quote":"초기 기획이 바보 같더라도 진행하면서 문제를 찾아야지 이거 바보네 하고 바로 수정해버리는 습관 제거","source":{"date":"2026-05-20","speaker":"user"},"immutable":true,"tags":["airc","origin","user-intent"],"provenance":{"from":["user"],"causes":["task-001","dec-001","dec-003"],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"u-002":{"t":"user_intent","quote":"문서 목적은 이걸 읽는순간 뭘 해야되는지 알아야됨","source":{"date":"2026-05-20","speaker":"user"},"immutable":true,"tags":["freedoc","user-intent"],"provenance":{"from":["user"],"causes":["task-003"],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"u-003":{"t":"user_intent","quote":"목적이 같아야됨. 초기 설정이 유지 문제 발생시 사용자랑 협의 혼자 변경금지","source":{"date":"2026-05-20","speaker":"user"},"immutable":true,"tags":["akl","freelang","testbed","philosophy","user-intent"],"provenance":{"from":["user"],"causes":["dec-004"],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"a-001":{"t":"assumption","v":"FreeLang v11로 JSON 파서 구현 가능","verify_by":["node bootstrap.js run airc-parser.fl"],"status":"pending","resolved_by":null,"tags":["assumption","freelang","nodejs"],"provenance":{"from":["observation"],"causes":[],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"err-001":{"t":"error","v":"FREEDOC v2 validator가 PHASES/COMMANDS/NEXT 블록 거부","when":"2026-05-20","cause":"허용 블록명 제한","fix":"FIXED 블록으로 통합","repeat_risk":"high","note":"freedoc validate 전 블록명 사전 확인 필수","tags":["freelang","bug","shell-exec","path","space"],"provenance":{"from":["observation","scan-blockers.fl"],"causes":[],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"u-004":{"t":"user_intent","quote":"언어 독립임. 이게 목표. 나만의 목표고 너는 동반자임. 그래서 완성을 미루고 있는거고","source":{"date":"2026-05-20","speaker":"user"},"immutable":true,"tags":["freelang","independence","goal","philosophy","user-intent"],"provenance":{"from":["user"],"causes":["dec-002","fact-003"],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"u-005":{"t":"user_intent","quote":"지금 대화는 우리서버를 너하고 이해하고 서로 협의하는거임. 단순 코드 몇줄이 중요한게 아니고 서로 문제를 논의하고 실제 해답을 찾는과정","source":{"date":"2026-05-20","speaker":"user"},"immutable":true,"tags":["nodejs","prohibition","user-intent"],"provenance":{"from":["user"],"causes":["dec-005"],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"u-006":{"t":"user_intent","quote":"나는 ts node js 독립임","source":{"date":"2026-05-20","speaker":"user"},"immutable":true,"tags":["airc","recording","philosophy","user-intent"],"provenance":{"from":["user"],"causes":[],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"fact-001":{"t":"fact","v":"FreeLang의 목표는 TS/Node.js 완전 독립. AKL은 그 언어의 실전 테스트 베드. 프로젝트 완성이 목적이 아님.","verified":true,"source":"u-004","lifecycle":{"state":"active"},"tags":["freelang","l3","self-hosting","sha256"],"provenance":{"from":["observation","u-004"],"causes":[],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]}},"fact-002":{"t":"fact","v":"FreeLang v1→v11 진화의 원동력은 프로젝트가 막힐 때마다 언어를 고쳤기 때문. 프로젝트 미완성 → 언어 결함 발견 → 함수 추가/문법 수정 → v++","verified":true,"source":"session-2026-05-20","lifecycle":{"state":"active"},"tags":["freelang","nodejs","bootstrap","runtime"],"provenance":{"from":["observation"],"causes":["err-002"],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]}},"fact-003":{"t":"fact","v":"서버 내 81개 프로젝트 todo 상태. 미구현이 아니라 FreeLang 의존성이 해결 안 돼서 막힌 것.","verified":true,"source":"freedoc-scan-2026-05-20","lifecycle":{"state":"active"},"tags":["freelang","independence","goal","nodejs"],"provenance":{"from":["u-004","fact-002"],"causes":["dec-002"],"session":"2026-05-20"},"deps":{"needs":["fact-002"],"blocks":[]}},"fact-004":{"t":"fact","v":"AKL 40개 앱 = FreeLang 범용성 검증 도메인. AKL 전부 돌아가는 날 = FreeLang 완숙한 날.","verified":true,"source":"session-2026-05-20","lifecycle":{"state":"active"},"tags":["akl","testbed","freelang","version-evolution"],"provenance":{"from":["u-003","dec-004"],"causes":[],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]}},"fact-005":{"t":"fact","v":"v11 근본 병목: sleep = Atomics.wait → 이벤트 루프 블로킹 (PAIN.fds p14). fl-yield 미구현 (YIELD-2). 이게 dclub/akl 서비스 크래시 원인.","verified":true,"source":"PAIN.fds,YIELD-SEMANTICS.fds","lifecycle":{"state":"active"},"tags":["freedoc","scan","status"],"provenance":{"from":["observation","scan-blockers.fl"],"causes":["fact-006"],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]}},"err-002":{"t":"error","v":"dclub 7개 서비스 287K+ 재시작 (dclub-chat, chat-bot, codegen, deployer, monitor, notes, notes-ai)","when":"2026-05-20","cause":"JS(.js) 구현 — FreeLang 독립 목표와 반대 방향. dclub-tasks만 FreeLang(.fl)으로 0회 재시작.","fix":"FreeLang으로 재구현 필요. 단 FreeLang이 해당 기능 지원할 때까지 보류.","repeat_risk":"high","note":"JS 서비스는 언어 독립 목표와 근본 충돌. 빠른 해결보다 방향 일치가 우선.","tags":["freelang","nodejs","bootstrap","independence","contradiction"],"provenance":{"from":["fact-002","u-004"],"causes":["dec-002"],"session":"2026-05-20"},"deps":{"needs":["fact-002"],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"dec-005":{"t":"decision","v":"JS(.js) 서비스 신규 작성 금지. FreeLang이 지원하면 FreeLang으로, 못 하면 보류.","why":["JS로 만들면 언어 독립 목표와 반대","dclub 7개 서비스가 JS라서 목표 충돌 — 사용자가 멈춘 이유","dclub-tasks(FreeLang) 0재시작 vs dclub-chat(JS) 287K재시작이 증거"],"verified":true,"lock":true,"lifecycle":{"state":"active"},"tags":["nodejs","js","prohibition","lock"],"provenance":{"from":["dec-002","u-005"],"causes":["err-007"],"session":"2026-05-20"},"deps":{"needs":["dec-002"],"blocks":[]}},"err-003":{"t":"error","v":"shell-exec: 공백 포함 경로에서 빈 결과 반환","when":"2026-05-20","cause":"execSync(cmd) 직접 호출 — sh -c 없이 tokenization → 공백 경로 분리됨","fix":"shell-exec-result 사용 (spawnSync sh -c 방식). shell-exec는 공백 없는 단순 명령만 사용.","repeat_risk":"high","note":"find /path/with spaces → 실패. shell-exec-result는 정상 작동.","tags":["freelang","bug","shell-exec","defn","scope"],"provenance":{"from":["observation","scan-blockers.fl"],"causes":[],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"err-004":{"t":"error","v":"check-parens.py: 이스케이프 따옴표 내부를 괄호로 카운트","when":"2026-05-20","cause":"문자열 내 '\"' 처리 시 파서가 괄호 균형 오계산","fix":"이스케이프 따옴표 대신 변수 우회 또는 다른 방법으로 특수문자 처리","repeat_risk":"medium","note":"(str-replace-all x '\"' '') 패턴에서 발생. check-parens.py 버그.","tags":["freelang","bug","check-parens","escape","quote"],"provenance":{"from":["observation","scan-blockers.fl"],"causes":[],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"err-005":{"t":"error","v":"shell-exec: 함수 정의 내부에서 호출 시 빈 결과","when":"2026-05-20","cause":"defn 안에서 shell-exec 호출 시 cwd 컨텍스트가 달라지는 것으로 추정. 정확한 원인 미확인.","fix":"최상위 let 바인딩에서 직접 호출. defn 내부 shell-exec 회피.","repeat_risk":"medium","note":"같은 명령이 최상위에서는 정상, defn 내부에서는 빈 결과.","tags":["freelang","bug","sleep","event-loop","tcp","websocket","critical"],"provenance":{"from":["observation","PAIN.fds"],"causes":["dec-002"],"session":"2026-05-20"},"deps":{"needs":[],"blocks":["fact-003"]},"lifecycle":{"state":"active","since":"2026-05-20"}},"fact-006":{"t":"fact","v":"in_progress 17개 분석 결과: FreeLang 5개 vs Node.js 12개","verified":true,"source":"freedoc-scan-2026-05-20","detail":{"freelang":["dclub-chat","dclub-notes-ai","akl-writer","dclub-notes","evolution-control-tower"],"nodejs":["kim-jira","akl-note","reminder-bot","todo-app-v2","freelang-ghost-writer","task-scheduler","akl-calendar","akl-bookmark","akl-habit","time-tracker","akl-mindmap","freedoc"]},"lifecycle":{"state":"active"},"tags":["in-progress","freelang","nodejs","analysis"],"provenance":{"from":["fact-005","observation"],"causes":["fact-007","err-007"],"session":"2026-05-20"},"deps":{"needs":["fact-005"],"blocks":[]}},"fact-007":{"t":"fact","v":"in_progress Node.js 12개는 실질적으로 보류 상태. blocker 필드 none으로 기록됐지만 실제 원인은 dec-005 — JS 구현이라 목표와 충돌해 멈춘 것.","verified":true,"source":"fact-006","lifecycle":{"state":"active"},"tags":["nodejs","in-progress","hold","dec-005"],"provenance":{"from":["fact-006","dec-005"],"causes":[],"session":"2026-05-20"},"deps":{"needs":["fact-006","dec-005"],"blocks":[]}},"fact-008":{"t":"fact","v":"FREEDOC blocker 필드가 대부분 none 또는 미기재 — 실제 막힌 이유가 기록 안 됨. AIRC err 노드가 이를 보완해야 함.","verified":true,"source":"freedoc-scan-2026-05-20","lifecycle":{"state":"active"},"tags":["freedoc","blocker","metadata","gap"],"provenance":{"from":["observation"],"causes":["err-006"],"session":"2026-05-20"},"deps":{"needs":[],"blocks":[]}},"err-006":{"t":"error","v":"FREEDOC blocker 필드 미기재 관행 — 왜 멈췄는지 추적 불가","when":"2026-05-20","cause":"FREEDOC 작성 시 blocker 필드를 none으로 기본 입력. 실제 blocking 원인 미기록.","fix":"앞으로 막히면 AIRC err 노드로 원인 기록. FREEDOC blocker는 단순 상태, AIRC가 인과관계 담당.","repeat_risk":"high","note":"in_progress 17개 중 blocker 명시된 것 0개. 전부 none.","tags":["freedoc","blocker","metadata","gap"],"provenance":{"from":["fact-008"],"causes":[],"session":"2026-05-20"},"deps":{"needs":["fact-008"],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"err-007":{"t":"error","v":"in_progress Node.js 12개 — dec-005 위반 상태로 방치","when":"2026-05-20","cause":"JS로 init/server running 상태에서 멈춤. FreeLang 독립 목표와 충돌. 재작성 시점 미정.","fix":"FreeLang이 해당 기능 지원할 때까지 공식 보류 처리. AIRC에 blocked_by=freelang_limitation 기록.","repeat_risk":"medium","note":"목록: kim-jira, akl-note, reminder-bot, todo-app-v2, freelang-ghost-writer, task-scheduler, akl-calendar, akl-bookmark, akl-habit, time-tracker, akl-mindmap, freedoc","tags":["nodejs","in-progress","dec-005","violation","hold"],"provenance":{"from":["fact-006","fact-007","dec-005"],"causes":[],"session":"2026-05-20"},"deps":{"needs":["fact-006","dec-005"],"blocks":[]},"lifecycle":{"state":"active","since":"2026-05-20"}},"task-pm2-phase3":{"t":"task","v":"PM2 대시보드 Phase 3 완성 — 실시간 alert polling (1초) + 전체 프로세스 탭","entry":["/home/kimjin/kim/Desktop/kim/01_Active_Projects/pm2-dashboard/app/server.fl","/home/kimjin/kim/Desktop/kim/01_Active_Projects/pm2-dashboard/ui/index.html"],"check":["curl -s 'http://localhost:40255/api/alerts/since?since=2026-05-20T00:00:00Z' | jq .count","pm2 show pm2-dashboard | grep online"],"verified":true,"next":["task-003"],"lifecycle":{"state":"active"}},"fact-pm2-phase3":{"t":"fact","v":"PM2 대시보드: Phase 1(REST API+UI) → Phase 2(메트릭/경고/토스트) → Phase 3(실시간 polling+전체프로세스). 완성도 10/10, 포트 40255 안정 운영. git commit aeeb01d","verified":true,"source":"session-pm2-phase3","lifecycle":{"state":"active"}},"task-003-progress":{"t":"problem","v":"task-003 진행 중: FREEDOC.fds → .airc 대량 변환 (70개 파일)","when":"2026-05-20T18:35:00Z","lifecycle":{"state":"active"}},"fact-fds-to-airc-exists":{"t":"fact","v":"fds-to-airc.fl 도구 이미 존재 (3608 bytes). FREEDOC 파싱 + AIRC 노드 생성 완성.","verified":true,"source":"airc-spec/fds-to-airc.fl","lifecycle":{"state":"active"}},"fact-fds-test-success":{"t":"fact","v":"PM2 대시보드 FREEDOC.fds → FREEDOC.airc 변환 성공. task-001 + fact-port-pm2-dashboard 2개 노드 생성.","verified":true,"source":"manual test 2026-05-20","lifecycle":{"state":"active"}},"task-003-batch-convert":{"t":"problem","v":"70개 FREEDOC.fds 파일의 대량 변환 방법 결정 필요","when":"2026-05-20T18:35:00Z","options":["Option A: 반복 스크립트로 일괄 변환 (70 × fds-to-airc.fl)","Option B: 선별 변환 (in_progress/todo만)","Option C: 마이그레이션 도구 확장 (다중 파일 입력)"],"lifecycle":{"state":"active"}},"task-004":{"t":"task","v":"AIRC v2 — index/provenance/lifecycle/deps/semantic-search 구현","verified":true,"status":"done","next":[],"tags":["airc","schema","v2","index","provenance","semantic-search"],"provenance":{"from":["u-004","u-006"],"causes":[],"session":"2026-05-20"},"deps":{"needs":["task-001","task-002"],"blocks":[]},"lifecycle":{"state":"confirmed","since":"2026-05-20"}},"fact-batch-convert-success":{"t":"fact","v":"70개 FREEDOC.fds → .airc 일괄 변환 완료 (100% 성공). 모든 프로젝트 FREEDOC.airc 생성됨.","verified":true,"when":"2026-05-20T18:40:00Z","source":"batch-convert.sh","details":{"total":70,"success":70,"fail":0,"success_rate":"100%"},"lifecycle":{"state":"active"}},"fact-converted-projects":{"t":"fact","v":"변환된 70개 프로젝트 목록","verified":true,"projects":["akl-bookmark","akl-calendar","akl-habit","akl-inventory","akl-media","akl-note","akl-writer","beautysalon-pos","bicycle-club-app","claude-self-monitor","code-editor-online","dclub-chat","dclub-codegen","dclub-deployer","dclub-gateway","dclub-monitor","dclub-notes-ai","dclub-notes","dclub-tasks-v2","dclub-watchdog","evolution-control-tower","field-service-saas","fitness-club","fl-cache","fl-event-bus","fl-gateway","fl-playground","fl-port","fldb","freedoc","freelang-blog-gen","freelang-ghost-writer","freelang-ledger-v1","freelang-mongodb-driver","freelang-roadmap-2026","fv-lang","general-accounting","gogs-cli","kim-ai-os","kim-boilerplate","kim-home-dashboard","kim-jira","kim-project-cli","kim-voice-assistant","kimdb","language-sdk","linux-file-manager","moss-state-core","neural-voice-processor","open-ai-integration","pm2-dashboard","prompt-optimizer","pyfree","real-estate-manager","reminder-bot","robot-ai-project","rss-feed-aggregator","search-engine","secure-hasher","skl.kr","sms-gateway","speech-recognizer","ssh-sftp-server","storage-manager","task-scheduler","team-agents-guide","temperature-monitor","time-tracker","todo-app-v2","xpress"],"lifecycle":{"state":"active"}},"dec-airc-semantic-engine":{"t":"decision","v":"AIRC를 '의미 추적 엔진'으로 확장. 문자열 검색 → 의존성/의도/의존성 검색으로 전환","why":["8294 MD + 543 repos + 80~90 services에서 '왜 막혔지?' 질문에 답 불가","grep '문자열'은 관계를 못 본다","FREEDOC/AIRC가 이미 인과관계를 기록하고 있음","FreeLang 진화 흐름을 데이터로 봐야 함"],"verified":true,"lock":false,"lifecycle":{"state":"active"}},"fact-airc-5layer-arch":{"t":"fact","v":"AIRC Semantic Engine 아키텍처: input → compile → index → runtime daemon → UI","verified":true,"layers":{"1_input":[".airc",".fds",".md","git commits","pm2 state","logs","graveyard"],"2_compile":"canonical airc graph (project, task, decision, error, fact, assumption, user_intent, graveyard, dependency)","3_index":"역인덱스 (blocked_by→projects, decision→services, error→workaround, service→freelang feature)","4_runtime":"aircd daemon (graph cache, semantic search, dependency traversal, handoff context, provenance)","5_ui":"web UI + CLI commands"},"lifecycle":{"state":"active"}},"fact-airc-4-queries":{"t":"fact","v":"AIRC Semantic Engine 핵심 4가지 쿼리 타입","verified":true,"queries":{"A_why":{"example":"airc why akl-crm","output":["blocked_by: [YIELD-2, ...]","depends_on: [freelang-v11]","last_decision: [dec-005]","graveyard: [JS rewrite abandoned]"]},"B_blocked_by_reverse":{"example":"airc blocked-by YIELD-2","output":["12 projects affected","3 runtime failures","2 abandoned rewrites"]},"C_error_lineage":{"example":"airc trace err-003","output":["first_seen: 2026-05-20","affected: [airc-parser.fl, pm2-dashboard]","workaround: [shell-exec-result]","status: unresolved"]},"D_graveyard_why":{"example":"airc graveyard js-runtime","output":["abandoned because: [TS dependency remained, direction conflict with language independence]"]}},"lifecycle":{"state":"active"}},"task-004-airc-engine-mvp":{"t":"task","v":"AIRC Semantic Engine 최소 MVP 구현 (6단계)","entry":["/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc.fl","/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc"],"steps":["1. .airc parser: 70개 FREEDOC.airc 로드","2. canonical json: 통합 그래프 생성","3. full text index: 프로젝트/에러/결정 텍스트 인덱싱","4. blocked_by reverse map: 의존성 역인덱스","5. why command: airc why <project> 구현","6. lightweight web ui: 웹 인터페이스 (포트 40280-40289)"],"verified":false,"next":[],"lifecycle":{"state":"active"}},"u-007":{"t":"user_intent","quote":"지금 필요한 건 '검색창'이 아니라 AIRC 기반의 **의미 추적 엔진**에 가까움. 문자열 검색 아니라 관계/의도/의존성 검색.","source":{"date":"2026-05-20","speaker":"user"},"immutable":true}},"lock":[{"rule":"인간 가독성을 위한 구조 타협 금지","why":"AI용 포맷의 본질 훼손","source":"u-001","severity":10},{"rule":"추측을 verified:true로 기록 금지","why":"assumption contamination — 사실과 추측이 섞이면 전체 신뢰도 붕괴","source":"constitution.5_verified_only","severity":10},{"rule":"graveyard 항목 재오픈 금지","why":"이유 없는 재도입은 반복 실패 보장","source":"dec-002","severity":9},{"rule":"사용자 협의 없이 constitution 변경 금지","why":"u-003 직접 인용. Claude 단독 판단으로 목적 이탈 방지","source":"u-003","severity":10},{"rule":"user_intent 노드 요약/해석 금지. quote는 원문만","why":"interpretation drift 방지. 요약이 쌓이면 원의도 왜곡","source":"constitution.11_user_intent_immutable","severity":10}],"graveyard":[{"idea":"FREEDOC v2 블록 구조","why":"document 사고방식. AI 탐색 불가. err-001이 증거","verified":true,"final":true},{"idea":"마크다운 기반 AI 메모리","why":"자유 형식 = 구조 추론에 토큰 낭비. 일관성 강제 불가","verified":true,"final":true},{"idea":"현재 상태만 저장 (이유 없음)","why":"인과관계 없으면 다음 Claude가 같은 실수 반복","verified":true,"final":true},{"idea":"전체 세션 로그를 .airc 내부에 저장","why":"빠르게 거대화. token pollution. stale noise","verified":false,"final":true}],"session":{"current":{"model":"claude-haiku-4-5-20251001","date":"2026-05-20","focus":"task-004: AIRC Semantic Engine. FreeLang 진화 흐름을 의미론적으로 추적하는 엔진 구현."},"handoff":["🚀 task-004 시작: AIRC Semantic Tracing Engine MVP. 최소 6단계 구현 필요 (parser→compile→index→runtime→why→ui)","✅ task-003 완료: 70개 FREEDOC.fds → .airc 변환 성공 (100%)","task-003 진행: fds-to-airc.fl 도구 확인, PM2 FREEDOC.airc 생성 성공, 70개 파일 대량 변환 방법 결정 대기","PM2 대시보드 Phase 3 완성: /api/alerts/since + 1초 polling + 프로세스 탭 (commit aeeb01d)","핵심 목표: FreeLang TS/Node.js 완전 독립 (u-004, u-006)","AKL = FreeLang 테스트 베드. 프로젝트 완성 목적 아님 (fact-001)","in_progress 17개 분석 완료: FreeLang 5개 진행중 / Node.js 12개 보류 (fact-006, fact-007)","Node.js 12개는 dec-005 위반 — JS라 목표 충돌. FreeLang 지원 시까지 공식 보류 (err-007)","FREEDOC blocker 필드 미기재 관행 발견 — AIRC가 인과관계 담당 (fact-008, err-006)","FreeLang in_progress 5개: dclub-chat, dclub-notes-ai, akl-writer, dclub-notes, evolution-control-tower","v11 병목: fl-yield 미구현(YIELD-2) + sleep 블로킹 (fact-005)","shell-exec 버그 3개 발견 → PAIN.fds p15/p16/p17 추가 완료 (err-003~005)","AIRC task-001~003 완료. scan-blockers.fl 작동 (79개 스캔)"]},"index":{"by_type":{"task":["task-001","task-002","task-003","task-pm2-phase3","task-004","task-004-airc-engine-mvp"],"decision":["dec-001","dec-002","dec-003","dec-005","dec-airc-semantic-engine"],"user_intent":["u-001","u-002","u-003","u-004","u-005","u-006","u-007"],"assumption":["a-001"],"error":["err-001","err-002","err-003","err-004","err-005","err-006","err-007"],"fact":["fact-001","fact-002","fact-003","fact-004","fact-005","fact-006","fact-007","fact-008","fact-pm2-phase3","fact-fds-to-airc-exists","fact-fds-test-success","fact-batch-convert-success","fact-converted-projects","fact-airc-5layer-arch","fact-airc-4-queries"],"problem":["task-003-progress","task-003-batch-convert"]},"by_tag":{"airc":["task-001","task-002","task-003","dec-001","dec-003","u-001","u-006","task-004"],"spec":["task-001"],"design":["task-001","dec-003"],"cli":["task-002"],"freelang":["task-002","task-003","dec-002","u-003","a-001","err-001","u-004","fact-001","fact-002","fact-003","fact-004","err-002","err-003","err-004","err-005","fact-006"],"freedoc":["task-003","u-002","fact-005","fact-008","err-006"],"converter":["task-003"],"append-only":["dec-001"],"immutability":["dec-001"],"language-design":["dec-002"],"nodejs":["dec-002","a-001","u-005","fact-002","fact-003","err-002","dec-005","fact-006","fact-007","err-007"],"graveyard":["dec-003"],"origin":["u-001"],"user-intent":["u-001","u-002","u-003","u-004","u-005","u-006"],"akl":["u-003","fact-004"],"testbed":["u-003","fact-004"],"philosophy":["u-003","u-004","u-006"],"assumption":["a-001"],"bug":["err-001","err-003","err-004","err-005"],"shell-exec":["err-001","err-003"],"path":["err-001"],"space":["err-001"],"independence":["u-004","fact-003","err-002"],"goal":["u-004","fact-003"],"prohibition":["u-005","dec-005"],"recording":["u-006"],"l3":["fact-001"],"self-hosting":["fact-001"],"sha256":["fact-001"],"bootstrap":["fact-002","err-002"],"runtime":["fact-002"],"version-evolution":["fact-004"],"scan":["fact-005"],"status":["fact-005"],"contradiction":["err-002"],"js":["dec-005"],"lock":["dec-005"],"defn":["err-003"],"scope":["err-003"],"check-parens":["err-004"],"escape":["err-004"],"quote":["err-004"],"sleep":["err-005"],"event-loop":["err-005"],"tcp":["err-005"],"websocket":["err-005"],"critical":["err-005"],"in-progress":["fact-006","fact-007","err-007"],"analysis":["fact-006"],"hold":["fact-007","err-007"],"dec-005":["fact-007","err-007"],"blocker":["fact-008","err-006"],"metadata":["fact-008","err-006"],"gap":["fact-008","err-006"],"violation":["err-007"],"schema":["task-004"],"v2":["task-004"],"index":["task-004"],"provenance":["task-004"],"semantic-search":["task-004"]},"active":["task-001","task-002","task-003","dec-001","dec-002","dec-003","u-001","u-002","u-003","a-001","err-001","u-004","u-005","u-006","fact-001","fact-002","fact-003","fact-004","fact-005","err-002","dec-005","err-003","err-004","err-005","fact-006","fact-007","fact-008","err-006","err-007","task-pm2-phase3","fact-pm2-phase3","task-003-progress","fact-fds-to-airc-exists","fact-fds-test-success","task-003-batch-convert","task-004","fact-batch-convert-success","fact-converted-projects","dec-airc-semantic-engine","fact-airc-5layer-arch","fact-airc-4-queries","task-004-airc-engine-mvp","u-007"],"dead":[],"provenance_graph":{"task-001":{"from":["u-001"],"causes":["task-002","task-003"]},"task-002":{"from":["task-001","u-001"],"causes":[]},"task-003":{"from":["task-001","u-002"],"causes":[]},"dec-001":{"from":["u-001"],"causes":[]},"dec-002":{"from":["u-004","fact-003"],"causes":["dec-005","err-007"]},"dec-003":{"from":["u-001"],"causes":[]},"u-001":{"from":["user"],"causes":["task-001","dec-001","dec-003"]},"u-002":{"from":["user"],"causes":["task-003"]},"u-003":{"from":["user"],"causes":["dec-004"]},"a-001":{"from":["observation"],"causes":[]},"err-001":{"from":["observation","scan-blockers.fl"],"causes":[]},"u-004":{"from":["user"],"causes":["dec-002","fact-003"]},"u-005":{"from":["user"],"causes":["dec-005"]},"u-006":{"from":["user"],"causes":[]},"fact-001":{"from":["observation","u-004"],"causes":[]},"fact-002":{"from":["observation"],"causes":["err-002"]},"fact-003":{"from":["u-004","fact-002"],"causes":["dec-002"]},"fact-004":{"from":["u-003","dec-004"],"causes":[]},"fact-005":{"from":["observation","scan-blockers.fl"],"causes":["fact-006"]},"err-002":{"from":["fact-002","u-004"],"causes":["dec-002"]},"dec-005":{"from":["dec-002","u-005"],"causes":["err-007"]},"err-003":{"from":["observation","scan-blockers.fl"],"causes":[]},"err-004":{"from":["observation","scan-blockers.fl"],"causes":[]},"err-005":{"from":["observation","PAIN.fds"],"causes":["dec-002"]},"fact-006":{"from":["fact-005","observation"],"causes":["fact-007","err-007"]},"fact-007":{"from":["fact-006","dec-005"],"causes":[]},"fact-008":{"from":["observation"],"causes":["err-006"]},"err-006":{"from":["fact-008"],"causes":[]},"err-007":{"from":["fact-006","fact-007","dec-005"],"causes":[]},"task-pm2-phase3":{"from":[],"causes":[]},"fact-pm2-phase3":{"from":[],"causes":[]},"task-003-progress":{"from":[],"causes":[]},"fact-fds-to-airc-exists":{"from":[],"causes":[]},"fact-fds-test-success":{"from":[],"causes":[]},"task-003-batch-convert":{"from":[],"causes":[]},"task-004":{"from":["u-004","u-006"],"causes":[]},"fact-batch-convert-success":{"from":[],"causes":[]},"fact-converted-projects":{"from":[],"causes":[]},"dec-airc-semantic-engine":{"from":[],"causes":[]},"fact-airc-5layer-arch":{"from":[],"causes":[]},"fact-airc-4-queries":{"from":[],"causes":[]},"task-004-airc-engine-mvp":{"from":[],"causes":[]},"u-007":{"from":[],"causes":[]}},"dep_graph":{"task-001":{"needs":[],"blocks":["task-002","task-003"]},"task-002":{"needs":["task-001"],"blocks":[]},"task-003":{"needs":["task-001"],"blocks":[]},"dec-001":{"needs":[],"blocks":[]},"dec-002":{"needs":["fact-003"],"blocks":["dec-005"]},"dec-003":{"needs":[],"blocks":[]},"u-001":{"needs":[],"blocks":[]},"u-002":{"needs":[],"blocks":[]},"u-003":{"needs":[],"blocks":[]},"a-001":{"needs":[],"blocks":[]},"err-001":{"needs":[],"blocks":[]},"u-004":{"needs":[],"blocks":[]},"u-005":{"needs":[],"blocks":[]},"u-006":{"needs":[],"blocks":[]},"fact-001":{"needs":[],"blocks":[]},"fact-002":{"needs":[],"blocks":[]},"fact-003":{"needs":["fact-002"],"blocks":[]},"fact-004":{"needs":[],"blocks":[]},"fact-005":{"needs":[],"blocks":[]},"err-002":{"needs":["fact-002"],"blocks":[]},"dec-005":{"needs":["dec-002"],"blocks":[]},"err-003":{"needs":[],"blocks":[]},"err-004":{"needs":[],"blocks":[]},"err-005":{"needs":[],"blocks":["fact-003"]},"fact-006":{"needs":["fact-005"],"blocks":[]},"fact-007":{"needs":["fact-006","dec-005"],"blocks":[]},"fact-008":{"needs":[],"blocks":[]},"err-006":{"needs":["fact-008"],"blocks":[]},"err-007":{"needs":["fact-006","dec-005"],"blocks":[]},"task-pm2-phase3":{"needs":[],"blocks":[]},"fact-pm2-phase3":{"needs":[],"blocks":[]},"task-003-progress":{"needs":[],"blocks":[]},"fact-fds-to-airc-exists":{"needs":[],"blocks":[]},"fact-fds-test-success":{"needs":[],"blocks":[]},"task-003-batch-convert":{"needs":[],"blocks":[]},"task-004":{"needs":["task-001","task-002"],"blocks":[]},"fact-batch-convert-success":{"needs":[],"blocks":[]},"fact-converted-projects":{"needs":[],"blocks":[]},"dec-airc-semantic-engine":{"needs":[],"blocks":[]},"fact-airc-5layer-arch":{"needs":[],"blocks":[]},"fact-airc-4-queries":{"needs":[],"blocks":[]},"task-004-airc-engine-mvp":{"needs":[],"blocks":[]},"u-007":{"needs":[],"blocks":[]}},"_generated":"2026-05-20","_note":"auto-generated by build-index.fl — do not edit manually"}}
+{
+  "$": "airc-spec",
+  "version": "0.1.0",
+  "date": "2026-05-20",
+  "cmd": "python3 -c \"import json; d=json.load(open('SPEC.airc')); print('hot:', d['hot']); print('next:', d['nodes'][d['hot']]['next'])\"",
+  "hot": "task-005",
+  "constitution": {
+    "1_audience": "AI 전용. 인간 가독성을 위한 구조 타협 금지",
+    "2_consistency": "기록 형식과 읽기 형식이 동일한 규칙. 예외 없음",
+    "3_purpose_lock": "초기 설계 목적은 잠긴다. 변경은 사용자 협의 후에만. Claude 단독 변경 금지",
+    "4_error_log": "실수, 오류, 반복 패턴도 nodes에 기록. 성공만 기록하지 않는다",
+    "5_verified_only": "검증된 사실만 fact 타입. 추측은 assumption으로 분리",
+    "6_handoff": "hot + next + lock + graveyard + session.handoff 가 다음 Claude 인수인계 전부",
+    "7_append_only": "노드는 삭제하지 않는다. lifecycle.state=void 로만 무효화",
+    "8_lock_requires_why": "why 없는 lock 등록 불가. 이유 모르는 금지는 다음 Claude가 무시한다",
+    "9_session_minimal": "세션 기록은 current + handoff 만. 전체 로그는 외부 파일로 분리",
+    "10_assumption_lifecycle": "assumption은 검증 후 resolved_by 로 fact 연결 필수",
+    "11_user_intent_immutable": "사용자 발언은 quote 필드에 원문 보존. 요약/해석 금지. immutable:true"
+  },
+  "node_types": {
+    "problem": "현재 문제 — 해결 전까지 hot 가능",
+    "task": "다음 행동 — entry + check + verified 필수",
+    "decision": "구조 결정 — why 필수. lock:true 가능",
+    "fact": "검증된 사실 — verified:true 필수",
+    "assumption": "검증 전 가정 — verify_by 필수. status:pending",
+    "error": "실패 기록 — cause + fix + repeat_risk 필수",
+    "user_intent": "사용자 원문 — quote 필드. immutable:true 필수"
+  },
+  "field_rules": {
+    "all_nodes": [
+      "t",
+      "v"
+    ],
+    "task": [
+      "entry",
+      "check",
+      "verified",
+      "next"
+    ],
+    "decision": [
+      "why",
+      "verified"
+    ],
+    "fact": [
+      "verified:true"
+    ],
+    "assumption": [
+      "verify_by",
+      "status"
+    ],
+    "error": [
+      "cause",
+      "fix",
+      "repeat_risk"
+    ],
+    "user_intent": [
+      "quote",
+      "source",
+      "immutable:true"
+    ],
+    "lock_item": [
+      "rule",
+      "why",
+      "source",
+      "severity"
+    ],
+    "lifecycle": [
+      "state",
+      "by",
+      "at"
+    ]
+  },
+  "lifecycle_states": [
+    "active",
+    "void",
+    "deprecated",
+    "superseded",
+    "experimental",
+    "frozen"
+  ],
+  "nodes": {
+    "task-001": {
+      "t": "task",
+      "v": "SPEC.airc 확정 및 airc-parser.fl 구현",
+      "entry": [
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc",
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc-parser.fl"
+      ],
+      "check": [
+        "node /home/kimjin/freelang-v11/bootstrap.js run airc-parser.fl"
+      ],
+      "verified": true,
+      "next": [
+        "task-002"
+      ],
+      "tags": [
+        "airc",
+        "spec",
+        "design"
+      ],
+      "provenance": {
+        "from": [
+          "u-001"
+        ],
+        "causes": [
+          "task-002",
+          "task-003"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": [
+          "task-002",
+          "task-003"
+        ]
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "task-002": {
+      "t": "task",
+      "v": "CLI 구현: airc read / airc why / airc graveyard / airc next",
+      "verified": true,
+      "next": [
+        "task-003"
+      ],
+      "entry": [
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc.fl"
+      ],
+      "tags": [
+        "airc",
+        "cli",
+        "freelang"
+      ],
+      "provenance": {
+        "from": [
+          "task-001",
+          "u-001"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "task-001"
+        ],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "task-003": {
+      "t": "task",
+      "v": "FREEDOC.fds → .airc 마이그레이션 도구 (fds-to-airc.fl) 검증 및 70개 파일 변환 완료",
+      "verified": true,
+      "next": [
+        "task-004-airc-engine-mvp"
+      ],
+      "tags": [
+        "airc",
+        "freedoc",
+        "converter",
+        "freelang"
+      ],
+      "provenance": {
+        "from": [
+          "task-001",
+          "u-002"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "task-001"
+        ],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      },
+      "status": "complete",
+      "check": [
+        "find /home/kimjin/kim/Desktop/kim/01_Active_Projects -name FREEDOC.airc | wc -l"
+      ]
+    },
+    "dec-001": {
+      "t": "decision",
+      "v": "포맷은 JSON. transport layer. 본질은 AI State Graph",
+      "why": [
+        "파싱 100% 확실",
+        "타입 명확",
+        "추론 불필요",
+        "validator 구현 가능"
+      ],
+      "verified": true,
+      "lock": true,
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "airc",
+        "append-only",
+        "immutability"
+      ],
+      "provenance": {
+        "from": [
+          "u-001"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      }
+    },
+    "dec-002": {
+      "t": "decision",
+      "v": "append-only. 노드 삭제 금지. lifecycle.state=void 로만 무효화",
+      "why": [
+        "삭제하면 왜 폐기됐는지 증발",
+        "회귀 방지 실패",
+        "과거 결정 인과 붕괴"
+      ],
+      "verified": true,
+      "lock": true,
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "freelang",
+        "language-design",
+        "nodejs"
+      ],
+      "provenance": {
+        "from": [
+          "u-004",
+          "fact-003"
+        ],
+        "causes": [
+          "dec-005",
+          "err-007"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "fact-003"
+        ],
+        "blocks": [
+          "dec-005"
+        ]
+      }
+    },
+    "dec-003": {
+      "t": "decision",
+      "v": "replaces 필드로 canonical 노드 명시",
+      "why": [
+        "AI는 무엇이 현재 유효한지 즉시 알아야 함"
+      ],
+      "verified": true,
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "airc",
+        "graveyard",
+        "design"
+      ],
+      "provenance": {
+        "from": [
+          "u-001"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      }
+    },
+    "u-001": {
+      "t": "user_intent",
+      "quote": "초기 기획이 바보 같더라도 진행하면서 문제를 찾아야지 이거 바보네 하고 바로 수정해버리는 습관 제거",
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
+      "immutable": true,
+      "tags": [
+        "airc",
+        "origin",
+        "user-intent"
+      ],
+      "provenance": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "task-001",
+          "dec-001",
+          "dec-003"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "u-002": {
+      "t": "user_intent",
+      "quote": "문서 목적은 이걸 읽는순간 뭘 해야되는지 알아야됨",
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
+      "immutable": true,
+      "tags": [
+        "freedoc",
+        "user-intent"
+      ],
+      "provenance": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "task-003"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "u-003": {
+      "t": "user_intent",
+      "quote": "목적이 같아야됨. 초기 설정이 유지 문제 발생시 사용자랑 협의 혼자 변경금지",
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
+      "immutable": true,
+      "tags": [
+        "akl",
+        "freelang",
+        "testbed",
+        "philosophy",
+        "user-intent"
+      ],
+      "provenance": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "dec-004"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "a-001": {
+      "t": "assumption",
+      "v": "FreeLang v11로 JSON 파서 구현 가능",
+      "verify_by": [
+        "node bootstrap.js run airc-parser.fl"
+      ],
+      "status": "pending",
+      "resolved_by": null,
+      "tags": [
+        "assumption",
+        "freelang",
+        "nodejs"
+      ],
+      "provenance": {
+        "from": [
+          "observation"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "err-001": {
+      "t": "error",
+      "v": "FREEDOC v2 validator가 PHASES/COMMANDS/NEXT 블록 거부",
+      "when": "2026-05-20",
+      "cause": "허용 블록명 제한",
+      "fix": "FIXED 블록으로 통합",
+      "repeat_risk": "high",
+      "note": "freedoc validate 전 블록명 사전 확인 필수",
+      "tags": [
+        "freelang",
+        "bug",
+        "shell-exec",
+        "path",
+        "space"
+      ],
+      "provenance": {
+        "from": [
+          "observation",
+          "scan-blockers.fl"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "u-004": {
+      "t": "user_intent",
+      "quote": "언어 독립임. 이게 목표. 나만의 목표고 너는 동반자임. 그래서 완성을 미루고 있는거고",
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
+      "immutable": true,
+      "tags": [
+        "freelang",
+        "independence",
+        "goal",
+        "philosophy",
+        "user-intent"
+      ],
+      "provenance": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "dec-002",
+          "fact-003"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "u-005": {
+      "t": "user_intent",
+      "quote": "지금 대화는 우리서버를 너하고 이해하고 서로 협의하는거임. 단순 코드 몇줄이 중요한게 아니고 서로 문제를 논의하고 실제 해답을 찾는과정",
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
+      "immutable": true,
+      "tags": [
+        "nodejs",
+        "prohibition",
+        "user-intent"
+      ],
+      "provenance": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "dec-005"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "u-006": {
+      "t": "user_intent",
+      "quote": "나는 ts node js 독립임",
+      "source": {
+        "date": "2026-05-20",
+        "speaker": "user"
+      },
+      "immutable": true,
+      "tags": [
+        "airc",
+        "recording",
+        "philosophy",
+        "user-intent"
+      ],
+      "provenance": {
+        "from": [
+          "user"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "fact-001": {
+      "t": "fact",
+      "v": "FreeLang의 목표는 TS/Node.js 완전 독립. AKL은 그 언어의 실전 테스트 베드. 프로젝트 완성이 목적이 아님.",
+      "verified": true,
+      "source": "u-004",
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "freelang",
+        "l3",
+        "self-hosting",
+        "sha256"
+      ],
+      "provenance": {
+        "from": [
+          "observation",
+          "u-004"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      }
+    },
+    "fact-002": {
+      "t": "fact",
+      "v": "FreeLang v1→v11 진화의 원동력은 프로젝트가 막힐 때마다 언어를 고쳤기 때문. 프로젝트 미완성 → 언어 결함 발견 → 함수 추가/문법 수정 → v++",
+      "verified": true,
+      "source": "session-2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "freelang",
+        "nodejs",
+        "bootstrap",
+        "runtime"
+      ],
+      "provenance": {
+        "from": [
+          "observation"
+        ],
+        "causes": [
+          "err-002"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      }
+    },
+    "fact-003": {
+      "t": "fact",
+      "v": "서버 내 81개 프로젝트 todo 상태. 미구현이 아니라 FreeLang 의존성이 해결 안 돼서 막힌 것.",
+      "verified": true,
+      "source": "freedoc-scan-2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "freelang",
+        "independence",
+        "goal",
+        "nodejs"
+      ],
+      "provenance": {
+        "from": [
+          "u-004",
+          "fact-002"
+        ],
+        "causes": [
+          "dec-002"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "fact-002"
+        ],
+        "blocks": []
+      }
+    },
+    "fact-004": {
+      "t": "fact",
+      "v": "AKL 40개 앱 = FreeLang 범용성 검증 도메인. AKL 전부 돌아가는 날 = FreeLang 완숙한 날.",
+      "verified": true,
+      "source": "session-2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "akl",
+        "testbed",
+        "freelang",
+        "version-evolution"
+      ],
+      "provenance": {
+        "from": [
+          "u-003",
+          "dec-004"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      }
+    },
+    "fact-005": {
+      "t": "fact",
+      "v": "v11 근본 병목: sleep = Atomics.wait → 이벤트 루프 블로킹 (PAIN.fds p14). fl-yield 미구현 (YIELD-2). 이게 dclub/akl 서비스 크래시 원인.",
+      "verified": true,
+      "source": "PAIN.fds,YIELD-SEMANTICS.fds",
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "freedoc",
+        "scan",
+        "status"
+      ],
+      "provenance": {
+        "from": [
+          "observation",
+          "scan-blockers.fl"
+        ],
+        "causes": [
+          "fact-006"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      }
+    },
+    "err-002": {
+      "t": "error",
+      "v": "dclub 7개 서비스 287K+ 재시작 (dclub-chat, chat-bot, codegen, deployer, monitor, notes, notes-ai)",
+      "when": "2026-05-20",
+      "cause": "JS(.js) 구현 — FreeLang 독립 목표와 반대 방향. dclub-tasks만 FreeLang(.fl)으로 0회 재시작.",
+      "fix": "FreeLang으로 재구현 필요. 단 FreeLang이 해당 기능 지원할 때까지 보류.",
+      "repeat_risk": "high",
+      "note": "JS 서비스는 언어 독립 목표와 근본 충돌. 빠른 해결보다 방향 일치가 우선.",
+      "tags": [
+        "freelang",
+        "nodejs",
+        "bootstrap",
+        "independence",
+        "contradiction"
+      ],
+      "provenance": {
+        "from": [
+          "fact-002",
+          "u-004"
+        ],
+        "causes": [
+          "dec-002"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "fact-002"
+        ],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "dec-005": {
+      "t": "decision",
+      "v": "JS(.js) 서비스 신규 작성 금지. FreeLang이 지원하면 FreeLang으로, 못 하면 보류.",
+      "why": [
+        "JS로 만들면 언어 독립 목표와 반대",
+        "dclub 7개 서비스가 JS라서 목표 충돌 — 사용자가 멈춘 이유",
+        "dclub-tasks(FreeLang) 0재시작 vs dclub-chat(JS) 287K재시작이 증거"
+      ],
+      "verified": true,
+      "lock": true,
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "nodejs",
+        "js",
+        "prohibition",
+        "lock"
+      ],
+      "provenance": {
+        "from": [
+          "dec-002",
+          "u-005"
+        ],
+        "causes": [
+          "err-007"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "dec-002"
+        ],
+        "blocks": []
+      }
+    },
+    "err-003": {
+      "t": "error",
+      "v": "shell-exec: 공백 포함 경로에서 빈 결과 반환",
+      "when": "2026-05-20",
+      "cause": "execSync(cmd) 직접 호출 — sh -c 없이 tokenization → 공백 경로 분리됨",
+      "fix": "shell-exec-result 사용 (spawnSync sh -c 방식). shell-exec는 공백 없는 단순 명령만 사용.",
+      "repeat_risk": "high",
+      "note": "find /path/with spaces → 실패. shell-exec-result는 정상 작동.",
+      "tags": [
+        "freelang",
+        "bug",
+        "shell-exec",
+        "defn",
+        "scope"
+      ],
+      "provenance": {
+        "from": [
+          "observation",
+          "scan-blockers.fl"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "err-004": {
+      "t": "error",
+      "v": "check-parens.py: 이스케이프 따옴표 내부를 괄호로 카운트",
+      "when": "2026-05-20",
+      "cause": "문자열 내 '\"' 처리 시 파서가 괄호 균형 오계산",
+      "fix": "이스케이프 따옴표 대신 변수 우회 또는 다른 방법으로 특수문자 처리",
+      "repeat_risk": "medium",
+      "note": "(str-replace-all x '\"' '') 패턴에서 발생. check-parens.py 버그.",
+      "tags": [
+        "freelang",
+        "bug",
+        "check-parens",
+        "escape",
+        "quote"
+      ],
+      "provenance": {
+        "from": [
+          "observation",
+          "scan-blockers.fl"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "err-005": {
+      "t": "error",
+      "v": "shell-exec: 함수 정의 내부에서 호출 시 빈 결과",
+      "when": "2026-05-20",
+      "cause": "defn 안에서 shell-exec 호출 시 cwd 컨텍스트가 달라지는 것으로 추정. 정확한 원인 미확인.",
+      "fix": "최상위 let 바인딩에서 직접 호출. defn 내부 shell-exec 회피.",
+      "repeat_risk": "medium",
+      "note": "같은 명령이 최상위에서는 정상, defn 내부에서는 빈 결과.",
+      "tags": [
+        "freelang",
+        "bug",
+        "sleep",
+        "event-loop",
+        "tcp",
+        "websocket",
+        "critical"
+      ],
+      "provenance": {
+        "from": [
+          "observation",
+          "PAIN.fds"
+        ],
+        "causes": [
+          "dec-002"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": [
+          "fact-003"
+        ]
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "fact-006": {
+      "t": "fact",
+      "v": "in_progress 17개 분석 결과: FreeLang 5개 vs Node.js 12개",
+      "verified": true,
+      "source": "freedoc-scan-2026-05-20",
+      "detail": {
+        "freelang": [
+          "dclub-chat",
+          "dclub-notes-ai",
+          "akl-writer",
+          "dclub-notes",
+          "evolution-control-tower"
+        ],
+        "nodejs": [
+          "kim-jira",
+          "akl-note",
+          "reminder-bot",
+          "todo-app-v2",
+          "freelang-ghost-writer",
+          "task-scheduler",
+          "akl-calendar",
+          "akl-bookmark",
+          "akl-habit",
+          "time-tracker",
+          "akl-mindmap",
+          "freedoc"
+        ]
+      },
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "in-progress",
+        "freelang",
+        "nodejs",
+        "analysis"
+      ],
+      "provenance": {
+        "from": [
+          "fact-005",
+          "observation"
+        ],
+        "causes": [
+          "fact-007",
+          "err-007"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "fact-005"
+        ],
+        "blocks": []
+      }
+    },
+    "fact-007": {
+      "t": "fact",
+      "v": "in_progress Node.js 12개는 실질적으로 보류 상태. blocker 필드 none으로 기록됐지만 실제 원인은 dec-005 — JS 구현이라 목표와 충돌해 멈춘 것.",
+      "verified": true,
+      "source": "fact-006",
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "nodejs",
+        "in-progress",
+        "hold",
+        "dec-005"
+      ],
+      "provenance": {
+        "from": [
+          "fact-006",
+          "dec-005"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "fact-006",
+          "dec-005"
+        ],
+        "blocks": []
+      }
+    },
+    "fact-008": {
+      "t": "fact",
+      "v": "FREEDOC blocker 필드가 대부분 none 또는 미기재 — 실제 막힌 이유가 기록 안 됨. AIRC err 노드가 이를 보완해야 함.",
+      "verified": true,
+      "source": "freedoc-scan-2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      },
+      "tags": [
+        "freedoc",
+        "blocker",
+        "metadata",
+        "gap"
+      ],
+      "provenance": {
+        "from": [
+          "observation"
+        ],
+        "causes": [
+          "err-006"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      }
+    },
+    "err-006": {
+      "t": "error",
+      "v": "FREEDOC blocker 필드 미기재 관행 — 왜 멈췄는지 추적 불가",
+      "when": "2026-05-20",
+      "cause": "FREEDOC 작성 시 blocker 필드를 none으로 기본 입력. 실제 blocking 원인 미기록.",
+      "fix": "앞으로 막히면 AIRC err 노드로 원인 기록. FREEDOC blocker는 단순 상태, AIRC가 인과관계 담당.",
+      "repeat_risk": "high",
+      "note": "in_progress 17개 중 blocker 명시된 것 0개. 전부 none.",
+      "tags": [
+        "freedoc",
+        "blocker",
+        "metadata",
+        "gap"
+      ],
+      "provenance": {
+        "from": [
+          "fact-008"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "fact-008"
+        ],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "err-007": {
+      "t": "error",
+      "v": "in_progress Node.js 12개 — dec-005 위반 상태로 방치",
+      "when": "2026-05-20",
+      "cause": "JS로 init/server running 상태에서 멈춤. FreeLang 독립 목표와 충돌. 재작성 시점 미정.",
+      "fix": "FreeLang이 해당 기능 지원할 때까지 공식 보류 처리. AIRC에 blocked_by=freelang_limitation 기록.",
+      "repeat_risk": "medium",
+      "note": "목록: kim-jira, akl-note, reminder-bot, todo-app-v2, freelang-ghost-writer, task-scheduler, akl-calendar, akl-bookmark, akl-habit, time-tracker, akl-mindmap, freedoc",
+      "tags": [
+        "nodejs",
+        "in-progress",
+        "dec-005",
+        "violation",
+        "hold"
+      ],
+      "provenance": {
+        "from": [
+          "fact-006",
+          "fact-007",
+          "dec-005"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "fact-006",
+          "dec-005"
+        ],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "task-pm2-phase3": {
+      "t": "task",
+      "v": "PM2 대시보드 Phase 3 완성 — 실시간 alert polling (1초) + 전체 프로세스 탭",
+      "entry": [
+        "/home/kimjin/kim/Desktop/kim/01_Active_Projects/pm2-dashboard/app/server.fl",
+        "/home/kimjin/kim/Desktop/kim/01_Active_Projects/pm2-dashboard/ui/index.html"
+      ],
+      "check": [
+        "curl -s 'http://localhost:40255/api/alerts/since?since=2026-05-20T00:00:00Z' | jq .count",
+        "pm2 show pm2-dashboard | grep online"
+      ],
+      "verified": true,
+      "next": [
+        "task-003"
+      ],
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-pm2-phase3": {
+      "t": "fact",
+      "v": "PM2 대시보드: Phase 1(REST API+UI) → Phase 2(메트릭/경고/토스트) → Phase 3(실시간 polling+전체프로세스). 완성도 10/10, 포트 40255 안정 운영. git commit aeeb01d",
+      "verified": true,
+      "source": "session-pm2-phase3",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "task-003-progress": {
+      "t": "problem",
+      "v": "task-003 진행 중: FREEDOC.fds → .airc 대량 변환 (70개 파일)",
+      "when": "2026-05-20T18:35:00Z",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-fds-to-airc-exists": {
+      "t": "fact",
+      "v": "fds-to-airc.fl 도구 이미 존재 (3608 bytes). FREEDOC 파싱 + AIRC 노드 생성 완성.",
+      "verified": true,
+      "source": "airc-spec/fds-to-airc.fl",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-fds-test-success": {
+      "t": "fact",
+      "v": "PM2 대시보드 FREEDOC.fds → FREEDOC.airc 변환 성공. task-001 + fact-port-pm2-dashboard 2개 노드 생성.",
+      "verified": true,
+      "source": "manual test 2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "task-003-batch-convert": {
+      "t": "problem",
+      "v": "70개 FREEDOC.fds 파일의 대량 변환 방법 결정 필요",
+      "when": "2026-05-20T18:35:00Z",
+      "options": [
+        "Option A: 반복 스크립트로 일괄 변환 (70 × fds-to-airc.fl)",
+        "Option B: 선별 변환 (in_progress/todo만)",
+        "Option C: 마이그레이션 도구 확장 (다중 파일 입력)"
+      ],
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "task-004": {
+      "t": "task",
+      "v": "AIRC v2 — index/provenance/lifecycle/deps/semantic-search 구현",
+      "verified": true,
+      "status": "done",
+      "next": [],
+      "tags": [
+        "airc",
+        "schema",
+        "v2",
+        "index",
+        "provenance",
+        "semantic-search"
+      ],
+      "provenance": {
+        "from": [
+          "u-004",
+          "u-006"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "task-001",
+          "task-002"
+        ],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "confirmed",
+        "since": "2026-05-20"
+      }
+    },
+    "fact-batch-convert-success": {
+      "t": "fact",
+      "v": "70개 FREEDOC.fds → .airc 일괄 변환 완료 (100% 성공). 모든 프로젝트 FREEDOC.airc 생성됨.",
+      "verified": true,
+      "when": "2026-05-20T18:40:00Z",
+      "source": "batch-convert.sh",
+      "details": {
+        "total": 70,
+        "success": 70,
+        "fail": 0,
+        "success_rate": "100%"
+      },
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-converted-projects": {
+      "t": "fact",
+      "v": "변환된 70개 프로젝트 목록",
+      "verified": true,
+      "projects": [
+        "akl-bookmark",
+        "akl-calendar",
+        "akl-habit",
+        "akl-inventory",
+        "akl-media",
+        "akl-note",
+        "akl-writer",
+        "beautysalon-pos",
+        "bicycle-club-app",
+        "claude-self-monitor",
+        "code-editor-online",
+        "dclub-chat",
+        "dclub-codegen",
+        "dclub-deployer",
+        "dclub-gateway",
+        "dclub-monitor",
+        "dclub-notes-ai",
+        "dclub-notes",
+        "dclub-tasks-v2",
+        "dclub-watchdog",
+        "evolution-control-tower",
+        "field-service-saas",
+        "fitness-club",
+        "fl-cache",
+        "fl-event-bus",
+        "fl-gateway",
+        "fl-playground",
+        "fl-port",
+        "fldb",
+        "freedoc",
+        "freelang-blog-gen",
+        "freelang-ghost-writer",
+        "freelang-ledger-v1",
+        "freelang-mongodb-driver",
+        "freelang-roadmap-2026",
+        "fv-lang",
+        "general-accounting",
+        "gogs-cli",
+        "kim-ai-os",
+        "kim-boilerplate",
+        "kim-home-dashboard",
+        "kim-jira",
+        "kim-project-cli",
+        "kim-voice-assistant",
+        "kimdb",
+        "language-sdk",
+        "linux-file-manager",
+        "moss-state-core",
+        "neural-voice-processor",
+        "open-ai-integration",
+        "pm2-dashboard",
+        "prompt-optimizer",
+        "pyfree",
+        "real-estate-manager",
+        "reminder-bot",
+        "robot-ai-project",
+        "rss-feed-aggregator",
+        "search-engine",
+        "secure-hasher",
+        "skl.kr",
+        "sms-gateway",
+        "speech-recognizer",
+        "ssh-sftp-server",
+        "storage-manager",
+        "task-scheduler",
+        "team-agents-guide",
+        "temperature-monitor",
+        "time-tracker",
+        "todo-app-v2",
+        "xpress"
+      ],
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "dec-airc-semantic-engine": {
+      "t": "decision",
+      "v": "AIRC를 '의미 추적 엔진'으로 확장. 문자열 검색 → 의존성/의도/의존성 검색으로 전환",
+      "why": [
+        "8294 MD + 543 repos + 80~90 services에서 '왜 막혔지?' 질문에 답 불가",
+        "grep '문자열'은 관계를 못 본다",
+        "FREEDOC/AIRC가 이미 인과관계를 기록하고 있음",
+        "FreeLang 진화 흐름을 데이터로 봐야 함"
+      ],
+      "verified": true,
+      "lock": false,
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-airc-5layer-arch": {
+      "t": "fact",
+      "v": "AIRC Semantic Engine 아키텍처: input → compile → index → runtime daemon → UI",
+      "verified": true,
+      "layers": {
+        "1_input": [
+          ".airc",
+          ".fds",
+          ".md",
+          "git commits",
+          "pm2 state",
+          "logs",
+          "graveyard"
+        ],
+        "2_compile": "canonical airc graph (project, task, decision, error, fact, assumption, user_intent, graveyard, dependency)",
+        "3_index": "역인덱스 (blocked_by→projects, decision→services, error→workaround, service→freelang feature)",
+        "4_runtime": "aircd daemon (graph cache, semantic search, dependency traversal, handoff context, provenance)",
+        "5_ui": "web UI + CLI commands"
+      },
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-airc-4-queries": {
+      "t": "fact",
+      "v": "AIRC Semantic Engine 핵심 4가지 쿼리 타입",
+      "verified": true,
+      "queries": {
+        "A_why": {
+          "example": "airc why akl-crm",
+          "output": [
+            "blocked_by: [YIELD-2, ...]",
+            "depends_on: [freelang-v11]",
+            "last_decision: [dec-005]",
+            "graveyard: [JS rewrite abandoned]"
+          ]
+        },
+        "B_blocked_by_reverse": {
+          "example": "airc blocked-by YIELD-2",
+          "output": [
+            "12 projects affected",
+            "3 runtime failures",
+            "2 abandoned rewrites"
+          ]
+        },
+        "C_error_lineage": {
+          "example": "airc trace err-003",
+          "output": [
+            "first_seen: 2026-05-20",
+            "affected: [airc-parser.fl, pm2-dashboard]",
+            "workaround: [shell-exec-result]",
+            "status: unresolved"
+          ]
+        },
+        "D_graveyard_why": {
+          "example": "airc graveyard js-runtime",
+          "output": [
+            "abandoned because: [TS dependency remained, direction conflict with language independence]"
+          ]
+        }
+      },
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "task-004-airc-engine-mvp": {
+      "t": "task",
+      "v": "AIRC Semantic Engine 최소 MVP 구현 (6단계)",
+      "entry": [
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc.fl",
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc"
+      ],
+      "steps": [
+        "1. .airc parser: 70개 FREEDOC.airc 로드",
+        "2. canonical json: 통합 그래프 생성",
+        "3. full text index: 프로젝트/에러/결정 텍스트 인덱싱",
+        "4. blocked_by reverse map: 의존성 역인덱스",
+        "5. why command: airc why <project> 구현",
+        "6. lightweight web ui: 웹 인터페이스 (포트 40280-40289)"
+      ],
+      "verified": false,
+      "next": [],
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "u-007": {
+      "t": "user_intent",
+      "v": "AIRC Search의 진짜 가치 = 서버 전체를 하나의 진화 시스템처럼 다루게 되는 것",
+      "verified": true,
+      "quote": "언어 개발이 intuition → telemetry 로 바뀜",
+      "why": [
+        "1. blocked_by ranking: YIELD-2 고치면 14개 프로젝트 진행 가능 — 감각→측정",
+        "2. AI continuity layer: airc handoff → 3초 안에 세션 복원",
+        "3. 왜 멈췄는지 잊어버린 81개 todo 즉시 재개",
+        "4. graveyard: 왜 버렸는가가 가장 가치 있는 데이터 — 사고 반복 방지",
+        "5. 서버 관측: PM2=프로세스 상태, AIRC=왜 존재하는 서비스인가",
+        "6. FreeLang independence score: TS dependency % 시간별 측정",
+        "7. queryable failure memory: err 노드 = 실패 데이터셋",
+        "8. AI reasoning partner: decision/error/graveyard 구조화 → LLM이 이유 설명 가능",
+        "9. context loss 방지: 왜 그렇게 했는지 잃으면 같은 실험 반복",
+        "10. PM2(실행)+FreeLang(언어)+AIRC(기억) = 자기 진화형 개발 환경"
+      ],
+      "tags": [
+        "airc",
+        "philosophy",
+        "vision",
+        "telemetry",
+        "continuity",
+        "evolution"
+      ],
+      "provenance": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "fact-010",
+          "fact-011",
+          "task-005"
+        ],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "confirmed",
+        "since": "2026-05-20"
+      }
+    },
+    "task-004-step1-parser-complete": {
+      "t": "task",
+      "v": "task-004 Step 1 완료: .airc parser 구현 및 통합 그래프 생성",
+      "verified": true,
+      "entry": [
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc-parser-v2.fl",
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/airc-graph.json"
+      ],
+      "result": {
+        "spec_nodes": 43,
+        "freedoc_projects": 69,
+        "freedoc_nodes": 26,
+        "canonical_total_nodes": 68,
+        "blocked_by_index": 0,
+        "depends_on_index": 2
+      },
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-airc-graph-generated": {
+      "t": "fact",
+      "v": "Canonical AIRC Graph 생성 완료: 68개 통합 노드 + 역인덱스",
+      "verified": true,
+      "file": "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/airc-graph.json",
+      "size_bytes": "추적 필요",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "u-008": {
+      "t": "user_intent",
+      "v": "AKL 서비스 UI 복구 + AIRC 기록 요청",
+      "quote": "수정 하는거 계속하고 문서화를 airc 로 기록해",
+      "source": "session-2026-05-20",
+      "immutable": true
+    },
+    "err-008": {
+      "t": "error",
+      "v": "FreeLang ${} 보간 vs JS 템플릿 리터럴 충돌",
+      "cause": "FL 문자열 내 ${expr} 구문을 FreeLang이 변수 보간으로 처리. \\${ 이스케이프도 무효 — $ 다음 { 를 여전히 보간으로 취급",
+      "fix": "JS 템플릿 리터럴(backtick) → 일반 문자열 연결('...' + var + '...') 으로 교체. function(x){return} 형태 사용",
+      "repeat_risk": "high — FL 서버 파일에 JS 코드 인라인 시 항상 발생. 모든 `` ` `` backtick 템플릿 리터럴 금지",
+      "affected": [
+        "akl-notify/app/server.fl"
+      ],
+      "date": "2026-05-20"
+    },
+    "err-009": {
+      "t": "error",
+      "v": "sed -i 상대경로 사용 시 파일 0바이트로 초기화",
+      "cause": "sed -i 명령을 잘못된 CWD에서 상대경로로 실행 → 빈 파일 생성",
+      "fix": "항상 절대경로 사용: sed -i '...' /absolute/path/to/file.fl",
+      "repeat_risk": "high",
+      "date": "2026-05-20"
+    },
+    "fact-akl-ui-recovery-2026-05-20": {
+      "t": "fact",
+      "v": "AKL 12개 서비스 UI 복구 완료 (2026-05-20)",
+      "verified": true,
+      "services": [
+        "notify:39004",
+        "bookmark:39035",
+        "hr:39036",
+        "analytics:40318",
+        "billing:40315",
+        "payment:40313",
+        "social:40316",
+        "subscription:40314",
+        "marketing:40317",
+        "media:40311",
+        "account:39001",
+        "audit:39006"
+      ],
+      "changes": [
+        "handle-ui 함수 추가 (공통 CSS 인라인 + AKL 디자인)",
+        "route '/' → handle-ui 로 변경",
+        "notify: deprecated snake_case → kebab-case 교체",
+        "notify: JS 템플릿 리터럴 → 문자열 연결로 교체 (FL 보간 충돌 해결)",
+        "audit: Node.js HTTP 서버 HTML 반환으로 재작성"
+      ],
+      "date": "2026-05-20"
+    },
+    "fact-analytics-cluster": {
+      "t": "fact",
+      "v": "akl-analytics 포트 40318은 akl-analytics-cluster(4인스턴스)가 점유",
+      "verified": true,
+      "note": "standalone akl-analytics PM2 프로세스는 포트 충돌로 시작 불가. 반드시 akl-analytics-cluster 재시작",
+      "date": "2026-05-20"
+    },
+    "dec-akl-ui-pattern": {
+      "t": "decision",
+      "v": "AKL 서비스 UI 표준 패턴 확정",
+      "why": [
+        "모든 *.akl.kr 도메인은 브라우저 접근 시 HTML 반환 필수",
+        "공통 CSS: /home/kimjin/kim/Desktop/kim/akl/akl-shared/styles/akl.css 인라인",
+        "str-replace '</style>' '<\\/style>' 로 이스케이프 필수",
+        "CSP 헤더 필수: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+      ],
+      "verified": true,
+      "lock": false,
+      "date": "2026-05-20"
+    },
+    "fact-010": {
+      "t": "fact",
+      "v": "3계층: PM2(실행층) + FreeLang(언어층) + AIRC(기억층) = 자기 진화형 개발 환경",
+      "verified": true,
+      "source": "user-2026-05-20",
+      "detail": {
+        "pm2": "실행층 — 프로세스 상태",
+        "freelang": "언어층 — 언어 능력/한계",
+        "airc": "기억층 — 결정/실패/이유/맥락"
+      },
+      "tags": [
+        "architecture",
+        "pm2",
+        "freelang",
+        "airc",
+        "three-layer",
+        "self-evolving"
+      ],
+      "provenance": {
+        "from": [
+          "u-007"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "confirmed",
+        "since": "2026-05-20"
+      }
+    },
+    "fact-011": {
+      "t": "fact",
+      "v": "FreeLang independence score: TS/Node.js dependency % 시간별 측정 가능",
+      "verified": false,
+      "source": "user-2026-05-20",
+      "detail": {
+        "example": "2026-05: TS dep 71% → 2026-11: TS dep 24%",
+        "meaning": "독립이 감정이 아니라 측정 가능한 상태가 됨"
+      },
+      "tags": [
+        "freelang",
+        "independence",
+        "telemetry",
+        "measurement",
+        "typescript"
+      ],
+      "provenance": {
+        "from": [
+          "u-007",
+          "u-004"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "task-005": {
+      "t": "task",
+      "v": "blocked_by ranking — FreeLang 한계별 차단 프로젝트 수 집계 (airc blockers)",
+      "verified": false,
+      "status": "todo",
+      "next": [],
+      "detail": {
+        "goal": "어떤 FreeLang 기능 하나를 고치면 가장 많은 프로젝트가 진행되는가",
+        "expected_output": "YIELD-2 → 14개, shell-exec → 9개, async-runtime → 7개",
+        "implementation": "FREEDOC.fds blocker 필드 표준화 + airc blockers 명령"
+      },
+      "tags": [
+        "airc",
+        "telemetry",
+        "blockers",
+        "ranking",
+        "freelang",
+        "priority"
+      ],
+      "provenance": {
+        "from": [
+          "u-007"
+        ],
+        "causes": [],
+        "session": "2026-05-20"
+      },
+      "deps": {
+        "needs": [
+          "fact-008"
+        ],
+        "blocks": []
+      },
+      "lifecycle": {
+        "state": "active",
+        "since": "2026-05-20"
+      }
+    },
+    "task-004-step2-indexer-complete": {
+      "t": "task",
+      "v": "task-004 Step 2 완료: Full text index 생성",
+      "verified": true,
+      "entry": [
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc-indexer.fl",
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/full-text-index.json"
+      ],
+      "result": {
+        "documents": 68,
+        "unique_tokens": 571,
+        "avg_tokens_per_doc": 8,
+        "index_file_size": "tracking"
+      },
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-full-text-index-ready": {
+      "t": "fact",
+      "v": "Full text index 완성: 68개 문서 + 571개 토큰. 프로젝트/에러/결정 텍스트 빠른 검색 가능.",
+      "verified": true,
+      "file": "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/full-text-index.json",
+      "lifecycle": {
+        "state": "active"
+      }
+    }
+  },
+  "lock": [
+    {
+      "rule": "인간 가독성을 위한 구조 타협 금지",
+      "why": "AI용 포맷의 본질 훼손",
+      "source": "u-001",
+      "severity": 10
+    },
+    {
+      "rule": "추측을 verified:true로 기록 금지",
+      "why": "assumption contamination — 사실과 추측이 섞이면 전체 신뢰도 붕괴",
+      "source": "constitution.5_verified_only",
+      "severity": 10
+    },
+    {
+      "rule": "graveyard 항목 재오픈 금지",
+      "why": "이유 없는 재도입은 반복 실패 보장",
+      "source": "dec-002",
+      "severity": 9
+    },
+    {
+      "rule": "사용자 협의 없이 constitution 변경 금지",
+      "why": "u-003 직접 인용. Claude 단독 판단으로 목적 이탈 방지",
+      "source": "u-003",
+      "severity": 10
+    },
+    {
+      "rule": "user_intent 노드 요약/해석 금지. quote는 원문만",
+      "why": "interpretation drift 방지. 요약이 쌓이면 원의도 왜곡",
+      "source": "constitution.11_user_intent_immutable",
+      "severity": 10
+    }
+  ],
+  "graveyard": [
+    {
+      "idea": "FREEDOC v2 블록 구조",
+      "why": "document 사고방식. AI 탐색 불가. err-001이 증거",
+      "verified": true,
+      "final": true
+    },
+    {
+      "idea": "마크다운 기반 AI 메모리",
+      "why": "자유 형식 = 구조 추론에 토큰 낭비. 일관성 강제 불가",
+      "verified": true,
+      "final": true
+    },
+    {
+      "idea": "현재 상태만 저장 (이유 없음)",
+      "why": "인과관계 없으면 다음 Claude가 같은 실수 반복",
+      "verified": true,
+      "final": true
+    },
+    {
+      "idea": "전체 세션 로그를 .airc 내부에 저장",
+      "why": "빠르게 거대화. token pollution. stale noise",
+      "verified": false,
+      "final": true
+    }
+  ],
+  "session": {
+    "current": {
+      "model": "claude-haiku-4-5-20251001",
+      "date": "2026-05-20",
+      "focus": "task-004: AIRC Semantic Engine. FreeLang 진화 흐름을 의미론적으로 추적하는 엔진 구현."
+    },
+    "handoff": [
+      "✅ task-004 Step 2 완료: airc-indexer.fl. 571개 토큰 인덱싱. 다음: Step 3 (reverse map)",
+      "AIRC v2 완성: index/provenance/deps/lifecycle/search 모두 구현",
+      "hot: task-005 — blocked_by ranking 구현 (FreeLang 한계별 차단 프로젝트 수)",
+      "핵심 철학 확정(u-007): PM2(실행)+FreeLang(언어)+AIRC(기억) = 자기 진화형 개발 환경",
+      "FreeLang independence = 측정 가능한 상태로 만드는 것이 목표 (fact-011)",
+      "FREEDOC blocker 필드가 거의 비어있음(fact-008) → task-005 전제 조건",
+      "in_progress 5개 FL 프로젝트 분석 중: dclub-chat/dclub-notes-ai/akl-writer/dclub-notes/evolution-control-tower",
+      "dec-005 lock: .js 서비스 금지. FreeLang 미지원 시 공식 hold"
+    ]
+  },
+  "index": {
+    "by_type": {
+      "task": [
+        "task-001",
+        "task-002",
+        "task-003",
+        "task-pm2-phase3",
+        "task-004",
+        "task-004-airc-engine-mvp",
+        "task-004-step1-parser-complete",
+        "task-005"
+      ],
+      "decision": [
+        "dec-001",
+        "dec-002",
+        "dec-003",
+        "dec-005",
+        "dec-airc-semantic-engine",
+        "dec-akl-ui-pattern"
+      ],
+      "user_intent": [
+        "u-001",
+        "u-002",
+        "u-003",
+        "u-004",
+        "u-005",
+        "u-006",
+        "u-007",
+        "u-008"
+      ],
+      "assumption": [
+        "a-001"
+      ],
+      "error": [
+        "err-001",
+        "err-002",
+        "err-003",
+        "err-004",
+        "err-005",
+        "err-006",
+        "err-007",
+        "err-008",
+        "err-009"
+      ],
+      "fact": [
+        "fact-001",
+        "fact-002",
+        "fact-003",
+        "fact-004",
+        "fact-005",
+        "fact-006",
+        "fact-007",
+        "fact-008",
+        "fact-pm2-phase3",
+        "fact-fds-to-airc-exists",
+        "fact-fds-test-success",
+        "fact-batch-convert-success",
+        "fact-converted-projects",
+        "fact-airc-5layer-arch",
+        "fact-airc-4-queries",
+        "fact-airc-graph-generated",
+        "fact-akl-ui-recovery-2026-05-20",
+        "fact-analytics-cluster",
+        "fact-010",
+        "fact-011"
+      ],
+      "problem": [
+        "task-003-progress",
+        "task-003-batch-convert"
+      ]
+    },
+    "by_tag": {
+      "airc": [
+        "task-001",
+        "task-002",
+        "task-003",
+        "dec-001",
+        "dec-003",
+        "u-001",
+        "u-006",
+        "task-004",
+        "u-007",
+        "fact-010",
+        "task-005"
+      ],
+      "spec": [
+        "task-001"
+      ],
+      "design": [
+        "task-001",
+        "dec-003"
+      ],
+      "cli": [
+        "task-002"
+      ],
+      "freelang": [
+        "task-002",
+        "task-003",
+        "dec-002",
+        "u-003",
+        "a-001",
+        "err-001",
+        "u-004",
+        "fact-001",
+        "fact-002",
+        "fact-003",
+        "fact-004",
+        "err-002",
+        "err-003",
+        "err-004",
+        "err-005",
+        "fact-006",
+        "fact-010",
+        "fact-011",
+        "task-005"
+      ],
+      "freedoc": [
+        "task-003",
+        "u-002",
+        "fact-005",
+        "fact-008",
+        "err-006"
+      ],
+      "converter": [
+        "task-003"
+      ],
+      "append-only": [
+        "dec-001"
+      ],
+      "immutability": [
+        "dec-001"
+      ],
+      "language-design": [
+        "dec-002"
+      ],
+      "nodejs": [
+        "dec-002",
+        "a-001",
+        "u-005",
+        "fact-002",
+        "fact-003",
+        "err-002",
+        "dec-005",
+        "fact-006",
+        "fact-007",
+        "err-007"
+      ],
+      "graveyard": [
+        "dec-003"
+      ],
+      "origin": [
+        "u-001"
+      ],
+      "user-intent": [
+        "u-001",
+        "u-002",
+        "u-003",
+        "u-004",
+        "u-005",
+        "u-006"
+      ],
+      "akl": [
+        "u-003",
+        "fact-004"
+      ],
+      "testbed": [
+        "u-003",
+        "fact-004"
+      ],
+      "philosophy": [
+        "u-003",
+        "u-004",
+        "u-006",
+        "u-007"
+      ],
+      "assumption": [
+        "a-001"
+      ],
+      "bug": [
+        "err-001",
+        "err-003",
+        "err-004",
+        "err-005"
+      ],
+      "shell-exec": [
+        "err-001",
+        "err-003"
+      ],
+      "path": [
+        "err-001"
+      ],
+      "space": [
+        "err-001"
+      ],
+      "independence": [
+        "u-004",
+        "fact-003",
+        "err-002",
+        "fact-011"
+      ],
+      "goal": [
+        "u-004",
+        "fact-003"
+      ],
+      "prohibition": [
+        "u-005",
+        "dec-005"
+      ],
+      "recording": [
+        "u-006"
+      ],
+      "l3": [
+        "fact-001"
+      ],
+      "self-hosting": [
+        "fact-001"
+      ],
+      "sha256": [
+        "fact-001"
+      ],
+      "bootstrap": [
+        "fact-002",
+        "err-002"
+      ],
+      "runtime": [
+        "fact-002"
+      ],
+      "version-evolution": [
+        "fact-004"
+      ],
+      "scan": [
+        "fact-005"
+      ],
+      "status": [
+        "fact-005"
+      ],
+      "contradiction": [
+        "err-002"
+      ],
+      "js": [
+        "dec-005"
+      ],
+      "lock": [
+        "dec-005"
+      ],
+      "defn": [
+        "err-003"
+      ],
+      "scope": [
+        "err-003"
+      ],
+      "check-parens": [
+        "err-004"
+      ],
+      "escape": [
+        "err-004"
+      ],
+      "quote": [
+        "err-004"
+      ],
+      "sleep": [
+        "err-005"
+      ],
+      "event-loop": [
+        "err-005"
+      ],
+      "tcp": [
+        "err-005"
+      ],
+      "websocket": [
+        "err-005"
+      ],
+      "critical": [
+        "err-005"
+      ],
+      "in-progress": [
+        "fact-006",
+        "fact-007",
+        "err-007"
+      ],
+      "analysis": [
+        "fact-006"
+      ],
+      "hold": [
+        "fact-007",
+        "err-007"
+      ],
+      "dec-005": [
+        "fact-007",
+        "err-007"
+      ],
+      "blocker": [
+        "fact-008",
+        "err-006"
+      ],
+      "metadata": [
+        "fact-008",
+        "err-006"
+      ],
+      "gap": [
+        "fact-008",
+        "err-006"
+      ],
+      "violation": [
+        "err-007"
+      ],
+      "schema": [
+        "task-004"
+      ],
+      "v2": [
+        "task-004"
+      ],
+      "index": [
+        "task-004"
+      ],
+      "provenance": [
+        "task-004"
+      ],
+      "semantic-search": [
+        "task-004"
+      ],
+      "vision": [
+        "u-007"
+      ],
+      "telemetry": [
+        "u-007",
+        "fact-011",
+        "task-005"
+      ],
+      "continuity": [
+        "u-007"
+      ],
+      "evolution": [
+        "u-007"
+      ],
+      "architecture": [
+        "fact-010"
+      ],
+      "pm2": [
+        "fact-010"
+      ],
+      "three-layer": [
+        "fact-010"
+      ],
+      "self-evolving": [
+        "fact-010"
+      ],
+      "measurement": [
+        "fact-011"
+      ],
+      "typescript": [
+        "fact-011"
+      ],
+      "blockers": [
+        "task-005"
+      ],
+      "ranking": [
+        "task-005"
+      ],
+      "priority": [
+        "task-005"
+      ]
+    },
+    "active": [
+      "task-001",
+      "task-002",
+      "task-003",
+      "dec-001",
+      "dec-002",
+      "dec-003",
+      "u-001",
+      "u-002",
+      "u-003",
+      "a-001",
+      "err-001",
+      "u-004",
+      "u-005",
+      "u-006",
+      "fact-001",
+      "fact-002",
+      "fact-003",
+      "fact-004",
+      "fact-005",
+      "err-002",
+      "dec-005",
+      "err-003",
+      "err-004",
+      "err-005",
+      "fact-006",
+      "fact-007",
+      "fact-008",
+      "err-006",
+      "err-007",
+      "task-pm2-phase3",
+      "fact-pm2-phase3",
+      "task-003-progress",
+      "fact-fds-to-airc-exists",
+      "fact-fds-test-success",
+      "task-003-batch-convert",
+      "task-004",
+      "fact-batch-convert-success",
+      "fact-converted-projects",
+      "dec-airc-semantic-engine",
+      "fact-airc-5layer-arch",
+      "fact-airc-4-queries",
+      "task-004-airc-engine-mvp",
+      "u-007",
+      "task-004-step1-parser-complete",
+      "fact-airc-graph-generated",
+      "u-008",
+      "err-008",
+      "err-009",
+      "fact-akl-ui-recovery-2026-05-20",
+      "fact-analytics-cluster",
+      "dec-akl-ui-pattern",
+      "fact-010",
+      "fact-011",
+      "task-005"
+    ],
+    "dead": [],
+    "provenance_graph": {
+      "task-001": {
+        "from": [
+          "u-001"
+        ],
+        "causes": [
+          "task-002",
+          "task-003"
+        ]
+      },
+      "task-002": {
+        "from": [
+          "task-001",
+          "u-001"
+        ],
+        "causes": []
+      },
+      "task-003": {
+        "from": [
+          "task-001",
+          "u-002"
+        ],
+        "causes": []
+      },
+      "dec-001": {
+        "from": [
+          "u-001"
+        ],
+        "causes": []
+      },
+      "dec-002": {
+        "from": [
+          "u-004",
+          "fact-003"
+        ],
+        "causes": [
+          "dec-005",
+          "err-007"
+        ]
+      },
+      "dec-003": {
+        "from": [
+          "u-001"
+        ],
+        "causes": []
+      },
+      "u-001": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "task-001",
+          "dec-001",
+          "dec-003"
+        ]
+      },
+      "u-002": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "task-003"
+        ]
+      },
+      "u-003": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "dec-004"
+        ]
+      },
+      "a-001": {
+        "from": [
+          "observation"
+        ],
+        "causes": []
+      },
+      "err-001": {
+        "from": [
+          "observation",
+          "scan-blockers.fl"
+        ],
+        "causes": []
+      },
+      "u-004": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "dec-002",
+          "fact-003"
+        ]
+      },
+      "u-005": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "dec-005"
+        ]
+      },
+      "u-006": {
+        "from": [
+          "user"
+        ],
+        "causes": []
+      },
+      "fact-001": {
+        "from": [
+          "observation",
+          "u-004"
+        ],
+        "causes": []
+      },
+      "fact-002": {
+        "from": [
+          "observation"
+        ],
+        "causes": [
+          "err-002"
+        ]
+      },
+      "fact-003": {
+        "from": [
+          "u-004",
+          "fact-002"
+        ],
+        "causes": [
+          "dec-002"
+        ]
+      },
+      "fact-004": {
+        "from": [
+          "u-003",
+          "dec-004"
+        ],
+        "causes": []
+      },
+      "fact-005": {
+        "from": [
+          "observation",
+          "scan-blockers.fl"
+        ],
+        "causes": [
+          "fact-006"
+        ]
+      },
+      "err-002": {
+        "from": [
+          "fact-002",
+          "u-004"
+        ],
+        "causes": [
+          "dec-002"
+        ]
+      },
+      "dec-005": {
+        "from": [
+          "dec-002",
+          "u-005"
+        ],
+        "causes": [
+          "err-007"
+        ]
+      },
+      "err-003": {
+        "from": [
+          "observation",
+          "scan-blockers.fl"
+        ],
+        "causes": []
+      },
+      "err-004": {
+        "from": [
+          "observation",
+          "scan-blockers.fl"
+        ],
+        "causes": []
+      },
+      "err-005": {
+        "from": [
+          "observation",
+          "PAIN.fds"
+        ],
+        "causes": [
+          "dec-002"
+        ]
+      },
+      "fact-006": {
+        "from": [
+          "fact-005",
+          "observation"
+        ],
+        "causes": [
+          "fact-007",
+          "err-007"
+        ]
+      },
+      "fact-007": {
+        "from": [
+          "fact-006",
+          "dec-005"
+        ],
+        "causes": []
+      },
+      "fact-008": {
+        "from": [
+          "observation"
+        ],
+        "causes": [
+          "err-006"
+        ]
+      },
+      "err-006": {
+        "from": [
+          "fact-008"
+        ],
+        "causes": []
+      },
+      "err-007": {
+        "from": [
+          "fact-006",
+          "fact-007",
+          "dec-005"
+        ],
+        "causes": []
+      },
+      "task-pm2-phase3": {
+        "from": [],
+        "causes": []
+      },
+      "fact-pm2-phase3": {
+        "from": [],
+        "causes": []
+      },
+      "task-003-progress": {
+        "from": [],
+        "causes": []
+      },
+      "fact-fds-to-airc-exists": {
+        "from": [],
+        "causes": []
+      },
+      "fact-fds-test-success": {
+        "from": [],
+        "causes": []
+      },
+      "task-003-batch-convert": {
+        "from": [],
+        "causes": []
+      },
+      "task-004": {
+        "from": [
+          "u-004",
+          "u-006"
+        ],
+        "causes": []
+      },
+      "fact-batch-convert-success": {
+        "from": [],
+        "causes": []
+      },
+      "fact-converted-projects": {
+        "from": [],
+        "causes": []
+      },
+      "dec-airc-semantic-engine": {
+        "from": [],
+        "causes": []
+      },
+      "fact-airc-5layer-arch": {
+        "from": [],
+        "causes": []
+      },
+      "fact-airc-4-queries": {
+        "from": [],
+        "causes": []
+      },
+      "task-004-airc-engine-mvp": {
+        "from": [],
+        "causes": []
+      },
+      "u-007": {
+        "from": [
+          "user"
+        ],
+        "causes": [
+          "fact-010",
+          "fact-011",
+          "task-005"
+        ]
+      },
+      "task-004-step1-parser-complete": {
+        "from": [],
+        "causes": []
+      },
+      "fact-airc-graph-generated": {
+        "from": [],
+        "causes": []
+      },
+      "u-008": {
+        "from": [],
+        "causes": []
+      },
+      "err-008": {
+        "from": [],
+        "causes": []
+      },
+      "err-009": {
+        "from": [],
+        "causes": []
+      },
+      "fact-akl-ui-recovery-2026-05-20": {
+        "from": [],
+        "causes": []
+      },
+      "fact-analytics-cluster": {
+        "from": [],
+        "causes": []
+      },
+      "dec-akl-ui-pattern": {
+        "from": [],
+        "causes": []
+      },
+      "fact-010": {
+        "from": [
+          "u-007"
+        ],
+        "causes": []
+      },
+      "fact-011": {
+        "from": [
+          "u-007",
+          "u-004"
+        ],
+        "causes": []
+      },
+      "task-005": {
+        "from": [
+          "u-007"
+        ],
+        "causes": []
+      }
+    },
+    "dep_graph": {
+      "task-001": {
+        "needs": [],
+        "blocks": [
+          "task-002",
+          "task-003"
+        ]
+      },
+      "task-002": {
+        "needs": [
+          "task-001"
+        ],
+        "blocks": []
+      },
+      "task-003": {
+        "needs": [
+          "task-001"
+        ],
+        "blocks": []
+      },
+      "dec-001": {
+        "needs": [],
+        "blocks": []
+      },
+      "dec-002": {
+        "needs": [
+          "fact-003"
+        ],
+        "blocks": [
+          "dec-005"
+        ]
+      },
+      "dec-003": {
+        "needs": [],
+        "blocks": []
+      },
+      "u-001": {
+        "needs": [],
+        "blocks": []
+      },
+      "u-002": {
+        "needs": [],
+        "blocks": []
+      },
+      "u-003": {
+        "needs": [],
+        "blocks": []
+      },
+      "a-001": {
+        "needs": [],
+        "blocks": []
+      },
+      "err-001": {
+        "needs": [],
+        "blocks": []
+      },
+      "u-004": {
+        "needs": [],
+        "blocks": []
+      },
+      "u-005": {
+        "needs": [],
+        "blocks": []
+      },
+      "u-006": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-001": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-002": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-003": {
+        "needs": [
+          "fact-002"
+        ],
+        "blocks": []
+      },
+      "fact-004": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-005": {
+        "needs": [],
+        "blocks": []
+      },
+      "err-002": {
+        "needs": [
+          "fact-002"
+        ],
+        "blocks": []
+      },
+      "dec-005": {
+        "needs": [
+          "dec-002"
+        ],
+        "blocks": []
+      },
+      "err-003": {
+        "needs": [],
+        "blocks": []
+      },
+      "err-004": {
+        "needs": [],
+        "blocks": []
+      },
+      "err-005": {
+        "needs": [],
+        "blocks": [
+          "fact-003"
+        ]
+      },
+      "fact-006": {
+        "needs": [
+          "fact-005"
+        ],
+        "blocks": []
+      },
+      "fact-007": {
+        "needs": [
+          "fact-006",
+          "dec-005"
+        ],
+        "blocks": []
+      },
+      "fact-008": {
+        "needs": [],
+        "blocks": []
+      },
+      "err-006": {
+        "needs": [
+          "fact-008"
+        ],
+        "blocks": []
+      },
+      "err-007": {
+        "needs": [
+          "fact-006",
+          "dec-005"
+        ],
+        "blocks": []
+      },
+      "task-pm2-phase3": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-pm2-phase3": {
+        "needs": [],
+        "blocks": []
+      },
+      "task-003-progress": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-fds-to-airc-exists": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-fds-test-success": {
+        "needs": [],
+        "blocks": []
+      },
+      "task-003-batch-convert": {
+        "needs": [],
+        "blocks": []
+      },
+      "task-004": {
+        "needs": [
+          "task-001",
+          "task-002"
+        ],
+        "blocks": []
+      },
+      "fact-batch-convert-success": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-converted-projects": {
+        "needs": [],
+        "blocks": []
+      },
+      "dec-airc-semantic-engine": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-airc-5layer-arch": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-airc-4-queries": {
+        "needs": [],
+        "blocks": []
+      },
+      "task-004-airc-engine-mvp": {
+        "needs": [],
+        "blocks": []
+      },
+      "u-007": {
+        "needs": [],
+        "blocks": []
+      },
+      "task-004-step1-parser-complete": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-airc-graph-generated": {
+        "needs": [],
+        "blocks": []
+      },
+      "u-008": {
+        "needs": [],
+        "blocks": []
+      },
+      "err-008": {
+        "needs": [],
+        "blocks": []
+      },
+      "err-009": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-akl-ui-recovery-2026-05-20": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-analytics-cluster": {
+        "needs": [],
+        "blocks": []
+      },
+      "dec-akl-ui-pattern": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-010": {
+        "needs": [],
+        "blocks": []
+      },
+      "fact-011": {
+        "needs": [],
+        "blocks": []
+      },
+      "task-005": {
+        "needs": [
+          "fact-008"
+        ],
+        "blocks": []
+      }
+    },
+    "_generated": "2026-05-20",
+    "_note": "auto-generated by build-index.fl — do not edit manually"
+  }
+}
