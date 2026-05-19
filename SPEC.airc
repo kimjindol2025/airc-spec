@@ -202,17 +202,105 @@
     }
   ],
 
+  "u-004": {
+    "t": "user_intent",
+    "quote": "언어 독립임. 이게 목표. 나만의 목표고 너는 동반자임. 그래서 완성을 미루고 있는거고",
+    "source": { "date": "2026-05-20", "speaker": "user" },
+    "immutable": true
+  },
+
+  "u-005": {
+    "t": "user_intent",
+    "quote": "지금 대화는 우리서버를 너하고 이해하고 서로 협의하는거임. 단순 코드 몇줄이 중요한게 아니고 서로 문제를 논의하고 실제 해답을 찾는과정",
+    "source": { "date": "2026-05-20", "speaker": "user" },
+    "immutable": true
+  },
+
+  "u-006": {
+    "t": "user_intent",
+    "quote": "나는 ts node js 독립임",
+    "source": { "date": "2026-05-20", "speaker": "user" },
+    "immutable": true
+  },
+
+  "fact-001": {
+    "t": "fact",
+    "v": "FreeLang의 목표는 TS/Node.js 완전 독립. AKL은 그 언어의 실전 테스트 베드. 프로젝트 완성이 목적이 아님.",
+    "verified": true,
+    "source": "u-004",
+    "lifecycle": { "state": "active" }
+  },
+
+  "fact-002": {
+    "t": "fact",
+    "v": "FreeLang v1→v11 진화의 원동력은 프로젝트가 막힐 때마다 언어를 고쳤기 때문. 프로젝트 미완성 → 언어 결함 발견 → 함수 추가/문법 수정 → v++",
+    "verified": true,
+    "source": "session-2026-05-20",
+    "lifecycle": { "state": "active" }
+  },
+
+  "fact-003": {
+    "t": "fact",
+    "v": "서버 내 81개 프로젝트 todo 상태. 미구현이 아니라 FreeLang 의존성이 해결 안 돼서 막힌 것.",
+    "verified": true,
+    "source": "freedoc-scan-2026-05-20",
+    "lifecycle": { "state": "active" }
+  },
+
+  "fact-004": {
+    "t": "fact",
+    "v": "AKL 40개 앱 = FreeLang 범용성 검증 도메인. AKL 전부 돌아가는 날 = FreeLang 완숙한 날.",
+    "verified": true,
+    "source": "session-2026-05-20",
+    "lifecycle": { "state": "active" }
+  },
+
+  "fact-005": {
+    "t": "fact",
+    "v": "v11 근본 병목: sleep = Atomics.wait → 이벤트 루프 블로킹 (PAIN.fds p14). fl-yield 미구현 (YIELD-2). 이게 dclub/akl 서비스 크래시 원인.",
+    "verified": true,
+    "source": "PAIN.fds,YIELD-SEMANTICS.fds",
+    "lifecycle": { "state": "active" }
+  },
+
+  "err-002": {
+    "t": "error",
+    "v": "dclub 7개 서비스 287K+ 재시작 (dclub-chat, chat-bot, codegen, deployer, monitor, notes, notes-ai)",
+    "when": "2026-05-20",
+    "cause": "JS(.js) 구현 — FreeLang 독립 목표와 반대 방향. dclub-tasks만 FreeLang(.fl)으로 0회 재시작.",
+    "fix": "FreeLang으로 재구현 필요. 단 FreeLang이 해당 기능 지원할 때까지 보류.",
+    "repeat_risk": "high",
+    "note": "JS 서비스는 언어 독립 목표와 근본 충돌. 빠른 해결보다 방향 일치가 우선."
+  },
+
+  "dec-005": {
+    "t": "decision",
+    "v": "JS(.js) 서비스 신규 작성 금지. FreeLang이 지원하면 FreeLang으로, 못 하면 보류.",
+    "why": [
+      "JS로 만들면 언어 독립 목표와 반대",
+      "dclub 7개 서비스가 JS라서 목표 충돌 — 사용자가 멈춘 이유",
+      "dclub-tasks(FreeLang) 0재시작 vs dclub-chat(JS) 287K재시작이 증거"
+    ],
+    "verified": true,
+    "lock": true,
+    "lifecycle": { "state": "active" }
+  },
+
   "session": {
     "current": {
       "model": "claude-sonnet-4.6",
       "date": "2026-05-20",
-      "focus": "SPEC.airc 확정"
+      "focus": "FreeLang 언어 독립 목표 + 서버 전체 구조 이해"
     },
     "handoff": [
-      "SPEC.airc 스펙 확정 완료",
-      "task-001: airc-parser.fl 미구현",
-      "a-001: FreeLang JSON 파싱 가능 여부 미검증",
-      "graveyard 확인 후 작업 시작"
+      "핵심 목표: FreeLang TS/Node.js 완전 독립 (u-004, u-006)",
+      "AKL = FreeLang 테스트 베드. 프로젝트 완성 목적 아님 (fact-001)",
+      "81개 todo = 언어 의존성 막힘. 미구현이 아님 (fact-003)",
+      "v11 병목: fl-yield 미구현(YIELD-2) + sleep 블로킹 (fact-005)",
+      "JS 서비스 금지 결정 — dec-005 lock:true",
+      "dclub 7개 서비스 287K 재시작 = JS 구현 문제 (err-002)",
+      "AIRC 목적: 이 여정을 다음 Claude도 이해하게 보존",
+      "task-001: airc-parser.fl 미구현"
     ]
   }
 }
