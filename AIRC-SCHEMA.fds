@@ -1,0 +1,100 @@
+FREEDOC {
+  version: "1.0"
+  spec: "2026-05"
+}
+
+IDENTITY {
+  what: airc-schema
+  domain: airc-spec
+  desc: "AIRC v2 노드 스키마 — 인덱싱·provenance·lifecycle·semantic search·dependency graph"
+}
+
+;; ── 노드 공통 필드 ──────────────────────────────────────────────────────────
+
+NODE_SCHEMA {
+  ;; 기본 (기존)
+  t:        "task | decision | fact | error | user_intent | assumption"
+  v:        "한 줄 요약"
+  verified: "boolean"
+
+  ;; lifecycle (v2 신규)
+  lifecycle: {
+    state:  "active | void | superseded | confirmed"
+    ;; active     = 살아있음 (기본)
+    ;; confirmed  = 외부 검증 완료 (더 강한 active)
+    ;; superseded = 다른 노드로 대체됨 (dead)
+    ;; void       = 무효화 (dead)
+    since:  "YYYY-MM-DD"
+    by:     "노드ID 또는 'user'"
+  }
+
+  ;; provenance (v2 신규) — 인과 추적
+  provenance: {
+    from:   "[노드ID, ...]  이 노드를 만든 근거 노드들"
+    causes: "[노드ID, ...]  이 노드가 만들어낸 결과 노드들"
+    session: "claude-session-ID 또는 날짜"
+  }
+
+  ;; dependency (v2 신규) — 의존 그래프
+  deps: {
+    needs:  "[노드ID, ...]  이 노드가 의존하는 노드"
+    blocks: "[노드ID, ...]  이 노드가 차단하는 노드"
+  }
+
+  ;; semantic (v2 신규) — 검색용
+  tags:    "[키워드, ...]  예: freelang, nodejs, websocket, sleep, bug"
+  summary: "검색 가능한 한 줄 (v와 다를 수 있음, 더 구체적)"
+}
+
+;; ── 인덱스 구조 (SPEC.airc 최상위) ─────────────────────────────────────────
+
+INDEX_SCHEMA {
+  ;; SPEC.airc 최상위에 위치. build-index.fl 로 자동 생성.
+
+  by_type: {
+    task:        "[node-id, ...]"
+    decision:    "[node-id, ...]"
+    fact:        "[node-id, ...]"
+    error:       "[node-id, ...]"
+    user_intent: "[node-id, ...]"
+    assumption:  "[node-id, ...]"
+  }
+
+  by_tag: {
+    ;; 태그 → 노드ID 목록 (자동생성)
+    "freelang":  "[node-id, ...]"
+    "websocket": "[node-id, ...]"
+    "...":       "..."
+  }
+
+  active:      "[node-id, ...]  lifecycle.state = active | confirmed"
+  dead:        "[node-id, ...]  lifecycle.state = void | superseded"
+
+  provenance_graph: {
+    ;; node-id → { from: [], causes: [] }
+    ;; 전체 인과 그래프 요약
+  }
+
+  dep_graph: {
+    ;; node-id → { needs: [], blocks: [] }
+  }
+}
+
+;; ── airc.fl CLI 명령어 (v2 추가) ────────────────────────────────────────────
+
+CLI_V2 {
+  "airc index"           "인덱스 전체 출력 (by_type, active/dead 수)"
+  "airc search <키워드>" "태그 + v + summary 전문 검색"
+  "airc dead"            "lifecycle.state = void|superseded 노드 목록"
+  "airc active"          "lifecycle.state = active|confirmed 노드 목록"
+  "airc deps <id>"       "특정 노드의 needs + blocks 출력"
+  "airc from <id>"       "이 노드를 만든 근거 노드들 (provenance.from)"
+  "airc causes <id>"     "이 노드가 만들어낸 결과 노드들 (provenance.causes)"
+  "airc graph"           "전체 dep_graph + provenance_graph 텍스트 출력"
+}
+
+DECISION {
+  index_regen: "build-index.fl 실행 시 자동 재생성. 수동 편집 금지."
+  dead_rule:   "dead 노드는 삭제 금지 — graveyard와 달리 노드 내 보존. lifecycle.state만 변경."
+  provenance:  "새 노드 추가 시 from 필드 필수 (근거 노드 없으면 'user' 또는 'observation')"
+}

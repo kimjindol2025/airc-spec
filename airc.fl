@@ -1,19 +1,28 @@
-;; airc.fl — AIRC CLI
-;; 사용법: node bootstrap.js run airc.fl <cmd> [node-id]
-;;   airc hot
-;;   airc next
-;;   airc lock
-;;   airc graveyard
-;;   airc why <node-id>
-;;   airc status  (기본)
+;; airc.fl — AIRC CLI v2
+;; 사용법: node bootstrap.js run airc.fl <cmd> [arg]
+;;
+;;   [기존]
+;;   airc status / hot / next / lock / graveyard / handoff / why <id>
+;;
+;;   [v2 신규]
+;;   airc index              — 전체 인덱스 (타입별/태그별/active/dead)
+;;   airc search <키워드>    — 노드 전문 검색 (v + tags + summary)
+;;   airc active             — 살아있는 노드 목록
+;;   airc dead               — 무효화 노드 목록 (void|superseded)
+;;   airc deps <id>          — 노드의 needs + blocks
+;;   airc from <id>          — provenance.from (이 노드를 만든 근거)
+;;   airc causes <id>        — provenance.causes (이 노드가 만든 결과)
+;;   airc graph              — 전체 dep/provenance 텍스트 그래프
 
 (define SPEC_PATH "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc")
 
 (defn load-spec []
   (let [$raw (file-read SPEC_PATH)]
     (if (nil-or-empty? $raw)
-      (do (println "ERROR: SPEC.airc 없음 — " SPEC_PATH) nil)
+      (do (println (str "ERROR: SPEC.airc 없음 — " SPEC_PATH)) nil)
       (json-parse $raw))))
+
+;; ── 기존 명령어 ──────────────────────────────────────────────────────────────
 
 (defn print-hot [$spec]
   (let [$hot  (get $spec "hot")
@@ -56,18 +65,25 @@
       (do
         (println (str "WHY [" $nid "] " (get $node "v")))
         (println (str "  type: " (get $node "t")))
+        (let [$lc (get $node "lifecycle")]
+          (when (not (nil? $lc))
+            (println (str "  lifecycle: " (get $lc "state") " (since " (get $lc "since") ")"))))
+        (let [$tags (get $node "tags")]
+          (when (not (nil? $tags))
+            (println (str "  tags: " (str $tags)))))
         (let [$why (get $node "why")]
           (when (not (nil? $why))
             (println "  why:")
             (doseq [$w $why]
               (println (str "    - " $w)))))
-        (let [$quote (get $node "quote")]
-          (when (not (nil? $quote))
-            (println (str "  quote: \"" $quote "\""))))
         (let [$cause (get $node "cause")]
           (when (not (nil? $cause))
             (println (str "  cause: " $cause))
-            (println (str "  fix: " (str (get $node "fix"))))))))))
+            (println (str "  fix: " (str (get $node "fix"))))))
+        (let [$prov (get $node "provenance")]
+          (when (not (nil? $prov))
+            (println (str "  from: " (str (get $prov "from"))))
+            (println (str "  causes: " (str (get $prov "causes"))))))))))
 
 (defn print-handoff [$spec]
   (println "HANDOFF (다음 Claude 인수인계):")
@@ -84,7 +100,148 @@
   (println "")
   (print-handoff $spec))
 
-;; --- 진입점 ---
+;; ── v2 신규 명령어 ────────────────────────────────────────────────────────────
+
+(defn print-index [$spec]
+  (let [$idx (get $spec "index")]
+    (if (nil? $idx)
+      (println "인덱스 없음 — build-index.fl 실행 필요")
+      (do
+        (println "=== AIRC INDEX ===")
+        (println "")
+        (println (str "전체 노드: " (str (length (keys (get $spec "nodes"))))))
+        (println (str "active:    " (str (length (get $idx "active")))))
+        (println (str "dead:      " (str (length (get $idx "dead")))))
+        (println "")
+        (println "── 타입별 ──")
+        (doseq [$t (keys (get $idx "by_type"))]
+          (let [$ids (get (get $idx "by_type") $t)]
+            (println (str "  " $t ": " (str (length $ids)) "개"))))
+        (println "")
+        (println "── 태그별 (상위 10) ──")
+        (let [$bt (get $idx "by_tag")
+              $sorted-tags (take 10 (keys $bt))]
+          (doseq [$tag $sorted-tags]
+            (println (str "  #" $tag ": " (str (length (get $bt $tag))) "개"))))))))
+
+(defn node-matches? [$node $kw]
+  (let [$v    (str (get $node "v"))
+        $tags (str (get $node "tags"))
+        $sum  (str (get $node "summary"))]
+    (or
+      (str-includes $v $kw)
+      (str-includes $tags $kw)
+      (str-includes $sum $kw))))
+
+(defn print-search [$spec $kw]
+  (println (str "SEARCH: \"" $kw "\""))
+  (println "")
+  (let [$nodes  (get $spec "nodes")
+        $found  (filter
+                  (fn [$nid] (node-matches? (get $nodes $nid) $kw))
+                  (keys $nodes))]
+    (if (empty? $found)
+      (println "  (결과 없음)")
+      (doseq [$nid $found]
+        (let [$n (get $nodes $nid)
+              $state (get-in $n ["lifecycle" "state"])]
+          (println (str "  [" $nid "] (" (get $n "t") "|" (str $state) ") " (get $n "v"))))))))
+
+(defn print-active [$spec]
+  (let [$idx (get $spec "index")]
+    (if (nil? $idx)
+      (println "인덱스 없음")
+      (do
+        (println (str "ACTIVE (" (str (length (get $idx "active"))) "개):"))
+        (doseq [$nid (get $idx "active")]
+          (let [$n (get-in $spec ["nodes" $nid])]
+            (println (str "  [" $nid "] (" (get $n "t") ") " (get $n "v")))))))))
+
+(defn print-dead [$spec]
+  (let [$idx (get $spec "index")]
+    (if (nil? $idx)
+      (println "인덱스 없음")
+      (if (empty? (get $idx "dead"))
+        (println "dead 노드 없음")
+        (do
+          (println (str "DEAD (" (str (length (get $idx "dead"))) "개):"))
+          (doseq [$nid (get $idx "dead")]
+            (let [$n (get-in $spec ["nodes" $nid])
+                  $lc (get $n "lifecycle")]
+              (println (str "  [" $nid "] " (get $lc "state") " — " (get $n "v"))))))))))
+
+(defn print-deps [$spec $nid]
+  (let [$node (get-in $spec ["nodes" $nid])]
+    (if (nil? $node)
+      (println (str "노드 없음: " $nid))
+      (let [$deps (get $node "deps")]
+        (println (str "DEPS [" $nid "] " (get $node "v")))
+        (if (nil? $deps)
+          (println "  (deps 없음 — v2 마이그레이션 필요)")
+          (do
+            (println (str "  needs  (의존): " (str (get $deps "needs"))))
+            (println (str "  blocks (차단): " (str (get $deps "blocks"))))))))))
+
+(defn print-from [$spec $nid]
+  (let [$node (get-in $spec ["nodes" $nid])]
+    (if (nil? $node)
+      (println (str "노드 없음: " $nid))
+      (let [$prov (get $node "provenance")
+            $from (if (nil? $prov) [] (get $prov "from"))]
+        (println (str "FROM [" $nid "] — 이 노드를 만든 근거:"))
+        (if (empty? $from)
+          (println "  (근거 없음)")
+          (doseq [$fid $from]
+            (let [$fn (get-in $spec ["nodes" $fid])]
+              (if (nil? $fn)
+                (println (str "  ← " $fid " (외부/user/observation)"))
+                (println (str "  ← [" $fid "] (" (get $fn "t") ") " (get $fn "v")))))))))))
+
+(defn print-causes [$spec $nid]
+  (let [$node (get-in $spec ["nodes" $nid])]
+    (if (nil? $node)
+      (println (str "노드 없음: " $nid))
+      (let [$prov   (get $node "provenance")
+            $causes (if (nil? $prov) [] (get $prov "causes"))]
+        (println (str "CAUSES [" $nid "] — 이 노드가 만들어낸 결과:"))
+        (if (empty? $causes)
+          (println "  (결과 없음)")
+          (doseq [$cid $causes]
+            (let [$cn (get-in $spec ["nodes" $cid])]
+              (if (nil? $cn)
+                (println (str "  → " $cid " (노드 없음)"))
+                (println (str "  → [" $cid "] (" (get $cn "t") ") " (get $cn "v")))))))))))
+
+(defn print-graph [$spec]
+  (let [$idx (get $spec "index")]
+    (if (nil? $idx)
+      (println "인덱스 없음")
+      (do
+        (println "=== DEPENDENCY GRAPH ===")
+        (doseq [$nid (keys (get $idx "dep_graph"))]
+          (let [$dg (get (get $idx "dep_graph") $nid)
+                $needs  (get $dg "needs")
+                $blocks (get $dg "blocks")]
+            (when (or (not (empty? $needs)) (not (empty? $blocks)))
+              (println (str $nid ":"))
+              (when (not (empty? $needs))
+                (println (str "  needs:  " (str $needs))))
+              (when (not (empty? $blocks))
+                (println (str "  blocks: " (str $blocks)))))))
+        (println "")
+        (println "=== PROVENANCE GRAPH ===")
+        (doseq [$nid (keys (get $idx "provenance_graph"))]
+          (let [$pg     (get (get $idx "provenance_graph") $nid)
+                $from   (get $pg "from")
+                $causes (get $pg "causes")]
+            (when (or (not (empty? $from)) (not (empty? $causes)))
+              (println (str $nid ":"))
+              (when (not (empty? $from))
+                (println (str "  from:   " (str $from))))
+              (when (not (empty? $causes))
+                (println (str "  causes: " (str $causes)))))))))))
+
+;; ── 진입점 ───────────────────────────────────────────────────────────────────
 
 (let [$argv (process-argv)
       $cmd  (if (> (length $argv) 2) (nth $argv 2) "status")
@@ -100,4 +257,20 @@
       (= $cmd "why")       (if (nil? $arg1)
                              (println "사용법: airc why <node-id>")
                              (print-why $spec $arg1))
+      (= $cmd "index")     (print-index $spec)
+      (= $cmd "search")    (if (nil? $arg1)
+                             (println "사용법: airc search <키워드>")
+                             (print-search $spec $arg1))
+      (= $cmd "active")    (print-active $spec)
+      (= $cmd "dead")      (print-dead $spec)
+      (= $cmd "deps")      (if (nil? $arg1)
+                             (println "사용법: airc deps <node-id>")
+                             (print-deps $spec $arg1))
+      (= $cmd "from")      (if (nil? $arg1)
+                             (println "사용법: airc from <node-id>")
+                             (print-from $spec $arg1))
+      (= $cmd "causes")    (if (nil? $arg1)
+                             (println "사용법: airc causes <node-id>")
+                             (print-causes $spec $arg1))
+      (= $cmd "graph")     (print-graph $spec)
       :else                (print-status $spec))))

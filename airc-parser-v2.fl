@@ -1,0 +1,188 @@
+;; airc-parser-v2.fl — 70개 FREEDOC.airc + SPEC.airc 통합 로드
+;; 사용법: node bootstrap.js run airc-parser-v2.fl
+;; 출력: /data/airc-graph.json (canonical graph)
+
+;; --- 설정 ---
+
+(define SPEC-PATH "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc")
+(define PROJECT-ROOT "/home/kimjin/kim/Desktop/kim/01_Active_Projects")
+(define OUTPUT-PATH "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/airc-graph.json")
+
+;; --- .airc 파일 발견 ---
+
+(defn find-airc-files []
+  "모든 FREEDOC.airc 파일 찾기"
+  (let [$cmd (str "find " PROJECT-ROOT " -name 'FREEDOC.airc' -type f | sort")
+        $result (shell $cmd)
+        $output (if (map? $result) (get $result "stdout" "") $result)
+        $lines (str-lines $output)]
+    (filter (fn [$line] (not (empty? $line))) $lines)))
+
+;; --- JSON 로드 안전 처리 ---
+
+(defn safe-json-parse [$content]
+  "JSON 파싱 + 오류 처리"
+  (try
+    (json-parse $content)
+    (catch $e
+      (println (str "❌ JSON 파싱 오류: " (get $e "message")))
+      nil)))
+
+;; --- FREEDOC.airc 병합 ---
+
+(defn load-airc-files []
+  "70개 FREEDOC.airc 모두 로드"
+  (let [$files (find-airc-files)
+        $count (atom 0)
+        $success (atom 0)
+        $fail (atom 0)
+        $all-nodes (atom {})]
+    (doseq [$file $files]
+      (swap! $count (fn [$c] (+ $c 1)))
+      (let [$content (file-read $file)]
+        (if (and (not (nil? $content)) (not (empty? $content)))
+          (let [$airc (safe-json-parse $content)]
+            (if (not (nil? $airc))
+              (do
+                (swap! $success (fn [$s] (+ $s 1)))
+                ;; 각 .airc의 노드들을 병합
+                (let [$nodes (get $airc "nodes" {})]
+                  (doseq [$node-id (keys $nodes)]
+                    (let [$node (get $nodes $node-id)
+                          $source (get $airc "source" "unknown")]
+                      (swap! $all-nodes
+                        (fn [$n]
+                          (assoc $n $node-id (assoc $node "source-file" $source))))))))
+              (swap! $fail (fn [$f] (+ $f 1)))))
+          (swap! $fail (fn [$f] (+ $f 1))))))
+    {
+      "total" (deref $count)
+      "success" (deref $success)
+      "fail" (deref $fail)
+      "nodes" (deref $all-nodes)
+    }))
+
+;; --- SPEC.airc 로드 ---
+
+(defn load-spec []
+  "SPEC.airc 로드"
+  (let [$content (file-read SPEC-PATH)]
+    (if (and (not (nil? $content)) (not (empty? $content)))
+      (safe-json-parse $content)
+      nil)))
+
+;; --- 통합 그래프 생성 ---
+
+(defn build-canonical-graph [$freedoc-result $spec]
+  "canonical JSON graph 생성"
+  (let [$spec-nodes (get $spec "nodes" {})
+        $freedoc-nodes (get $freedoc-result "nodes" {})
+
+        ;; 모든 노드 병합 (SPEC + FREEDOC)
+        $all-nodes (merge $spec-nodes $freedoc-nodes)
+
+        ;; 메타데이터
+        $graph {
+          "$" "airc-canonical-graph"
+          "version" "0.2.0"
+          "generated" (now-iso)
+          "stats" {
+            "total-nodes" (count (keys $all-nodes))
+            "spec-nodes" (count (keys $spec-nodes))
+            "freedoc-nodes" (count (keys $freedoc-nodes))
+            "freedoc-projects" (get $freedoc-result "success")
+          }
+          "nodes" $all-nodes
+          "constitution" (get $spec "constitution" {})
+          "lock" (get $spec "lock" [])
+          "graveyard" (get $spec "graveyard" [])
+          "session" (get $spec "session" {})
+        }]
+    $graph))
+
+;; --- 인덱스 생성 (선택) ---
+
+(defn build-reverse-index [$graph]
+  "blocked_by / depends_on 역인덱스"
+  (let [$nodes (get $graph "nodes" {})
+        $blocked-by-map (atom {})
+        $depends-on-map (atom {})]
+    (doseq [$node-id (keys $nodes)]
+      (let [$node (get $nodes $node-id)
+            $blocked-by (get $node "blocked_by")
+            $next (get $node "next" [])]
+
+        ;; blocked_by 역인덱스
+        (when (and (not (nil? $blocked-by)) (not (empty? $blocked-by)))
+          (swap! $blocked-by-map
+            (fn [$m]
+              (let [$existing (get $m $blocked-by [])]
+                (assoc $m $blocked-by (concat $existing [$node-id]))))))
+
+        ;; depends_on 역인덱스 (next 사용)
+        (doseq [$dep $next]
+          (swap! $depends-on-map
+            (fn [$m]
+              (let [$existing (get $m $dep [])]
+                (assoc $m $dep (concat $existing [$node-id]))))))))
+
+    {
+      "blocked_by_index" (deref $blocked-by-map)
+      "depends_on_index" (deref $depends-on-map)
+    }))
+
+;; --- 메인 진입점 ---
+
+(println "🔄 AIRC Parser V2 시작...")
+(println "")
+
+;; Step 1: SPEC.airc 로드
+(println "📖 Step 1: SPEC.airc 로드...")
+(let [$spec (load-spec)]
+  (if (nil? $spec)
+    (do
+      (println "❌ SPEC.airc 로드 실패")
+      (process-exit 1))
+    (do
+      (println (str "✅ SPEC.airc 로드 완료 — " (count (keys (get $spec "nodes" {}))) " 노드"))
+
+      ;; Step 2: FREEDOC.airc 로드
+      (println "📖 Step 2: FREEDOC.airc 70개 파일 로드...")
+      (let [$freedoc-result (load-airc-files)]
+        (println (str "✅ 로드 완료 — 성공: " (get $freedoc-result "success")
+                     " / 실패: " (get $freedoc-result "fail")
+                     " / 총: " (get $freedoc-result "total")))
+
+        ;; Step 3: 통합 그래프 생성
+        (println "🔗 Step 3: Canonical 그래프 생성...")
+        (let [$graph (build-canonical-graph $freedoc-result $spec)]
+          (println (str "✅ 그래프 생성 완료 — "
+                       (get-in $graph ["stats" "total-nodes"]) " 노드"))
+
+          ;; Step 4: 역인덱스 생성 (선택)
+          (println "🔍 Step 4: 역인덱스 생성...")
+          (let [$index (build-reverse-index $graph)
+                $blocked-by-count (count (keys (get $index "blocked_by_index" {})))
+                $depends-on-count (count (keys (get $index "depends_on_index" {})))]
+            (println (str "✅ 인덱스 생성 완료 — blocked_by: " $blocked-by-count
+                         " / depends_on: " $depends-on-count))
+
+            ;; Step 5: 파일 저장
+            (println "💾 Step 5: 파일 저장...")
+            (let [$final-output (assoc $graph "index" $index)
+                  $json (json-stringify $final-output)]
+              (file-write OUTPUT-PATH $json)
+              (println (str "✅ 저장 완료: " OUTPUT-PATH))
+
+              ;; 요약
+              (println "")
+              (println "════════════════════════════════════════")
+              (println "✅ AIRC Parser V2 완료")
+              (println "════════════════════════════════════════")
+              (println (str "📊 통합 그래프:"))
+              (println (str "   노드: " (get-in $graph ["stats" "total-nodes"])))
+              (println (str "   SPEC: " (get-in $graph ["stats" "spec-nodes"])))
+              (println (str "   FREEDOC: " (get-in $graph ["stats" "freedoc-nodes"])))
+              (println (str "   프로젝트: " (get-in $graph ["stats" "freedoc-projects"])))
+              (println "")
+              (println (str "📍 출력: " OUTPUT-PATH)))))))))
