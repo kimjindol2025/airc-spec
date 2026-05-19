@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "date": "2026-05-20",
   "cmd": "python3 -c \"import json; d=json.load(open('SPEC.airc')); print('hot:', d['hot']); print('next:', d['nodes'][d['hot']]['next'])\"",
-  "hot": "task-005",
+  "hot": "task-step4-readiness-check",
   "constitution": {
     "1_audience": "AI 전용. 인간 가독성을 위한 구조 타협 금지",
     "2_consistency": "기록 형식과 읽기 형식이 동일한 규칙. 예외 없음",
@@ -1610,6 +1610,273 @@
       "lifecycle": {
         "state": "active"
       }
+    },
+    "u-009": {
+      "t": "user_intent",
+      "v": "전체 AKL 서비스 UI 복구 작업 + 진행/실수/미완 AIRC 기록 요청",
+      "quote": "airc로 전부 기록 너가 진행과정 못한거 실수 등등",
+      "source": "session-2026-05-20",
+      "immutable": true
+    },
+    "err-010": {
+      "t": "error",
+      "v": "Python 자동화 스크립트가 handle-ui 함수는 추가했지만 route '/' 변경 누락",
+      "cause": "스크립트가 handle-ui 함수 삽입 후 기존 route 문자열 패턴 매칭 실패. bookmark는 '\"handle-health\"', hr는 '\"handle-root\"' 였는데 교체 대상 문자열이 달라 sed가 미동작",
+      "fix": "Edit 도구로 각 파일 직접 수정: bookmark line 415, hr line 167",
+      "repeat_risk": "high — Python 자동화 후 반드시 grep으로 route 변경 확인 필요",
+      "affected": [
+        "/home/kimjin/kim/Desktop/kim/01_Active_Projects/akl-bookmark/app/server.fl",
+        "/home/kimjin/kim/Desktop/kim/akl/akl-hr/app/server.fl"
+      ],
+      "date": "2026-05-20"
+    },
+    "err-011": {
+      "t": "error",
+      "v": "pm2 logs의 오래된 deprecated 경고를 현재 파일 상태로 착각",
+      "cause": "pm2 logs는 이전 실행분 로그도 출력함. snake_case 교체 완료 후에도 로그에 deprecated 경고가 보여 파일이 안 바뀐 줄 오인",
+      "fix": "grep으로 실제 파일 내용 확인 후 판단 — 로그만 보고 판단 금지",
+      "repeat_risk": "medium",
+      "date": "2026-05-20"
+    },
+    "err-012": {
+      "t": "error",
+      "v": "FreeLang 문자열에서 \\${ 이스케이프 미동작 — JS 템플릿 리터럴 보간 충돌",
+      "cause": "이전 세션에서 \\${ 로 이스케이프하면 FreeLang 보간 방지 가능하다고 가정했으나 실제로는 동작 안 함. FreeLang은 \\$를 리터럴 $ 로 처리 후 { 를 여전히 보간 시작으로 인식",
+      "fix": "JS 템플릿 리터럴(backtick) 전면 교체: '...' + var + '...' 또는 function(){return} 형태",
+      "repeat_risk": "high",
+      "rule": "FL 파일 내 JS 코드에서 backtick 템플릿 리터럴 절대 금지. arrow function은 가능하나 ${} 없이",
+      "date": "2026-05-20"
+    },
+    "err-013": {
+      "t": "error",
+      "v": "akl-analytics standalone 재시작 시도 → 포트 충돌 실패",
+      "cause": "akl-analytics-cluster (4인스턴스)가 포트 40318 점유 중. standalone 프로세스는 같은 포트로 시작 불가",
+      "fix": "pm2 restart akl-analytics-cluster 로 cluster 버전 재시작",
+      "repeat_risk": "medium",
+      "rule": "PM2 list에서 -cluster 접미사 확인. cluster 버전이 있으면 standalone 재시작 무효",
+      "date": "2026-05-20"
+    },
+    "err-014": {
+      "t": "error",
+      "v": "check-parens.py가 FL 문자열 리터럴 내부 () [] 를 실제 괄호로 오카운트",
+      "cause": "check-parens 스크립트가 문자열 내부 이스케이프 처리 미흡. \\\"...(...)...\\\" 내부의 괄호를 코드 괄호로 카운팅",
+      "fix": "check-parens 결과는 참고용. 실제 검증은 pm2 restart 후 curl 테스트로 확인",
+      "repeat_risk": "medium — JS 코드 인라인된 FL 파일에서 자주 발생",
+      "date": "2026-05-20"
+    },
+    "fact-session-progress-2026-05-20": {
+      "t": "fact",
+      "v": "2026-05-20 AKL UI 복구 세션 전체 진행 과정",
+      "verified": true,
+      "timeline": [
+        "1. AKL 92개 PM2 프로세스 전체 진단",
+        "2. akl-notify: snake_case → kebab-case (server_get→server-get 등) 전면 교체",
+        "3. akl-analytics: handle-ui 추가 (MariaDB 통계 포함), cluster 재시작",
+        "4. akl-billing/payment/social/subscription/marketing/media: Python 스크립트로 handle-ui 일괄 추가",
+        "5. akl-accounting: inline lambda route → handle-ui 함수 분리",
+        "6. audit: Node.js HTTP 서버 HTML 반환으로 재작성 (/tmp/audit-http.js)",
+        "7. bookmark/hr: handle-ui 함수는 추가됐으나 route 변경 누락 → 직접 Edit 수정",
+        "8. notify: \\${ 이스케이프 실패 확인 → JS 템플릿 리터럴 → 문자열 연결 교체",
+        "9. 전체 12개 서비스 200 OK HTML 반환 확인"
+      ],
+      "date": "2026-05-20"
+    },
+    "task-akl-remaining": {
+      "t": "task",
+      "v": "AKL 도메인 미확인/미완료 항목",
+      "verified": false,
+      "entry": [],
+      "check": [
+        "curl -s https://habit.akl.kr/ — SSO 리다이렉트면 정상, 빈 응답이면 문제",
+        "curl -s https://note.akl.kr/ — 동일 확인",
+        "curl -s https://gcp.akl.kr/ — API 전용이면 UI 불필요",
+        "curl -s https://search.akl.kr/ — 동일",
+        "akl-accounting(39013) handle-ui 재시작 후 확인"
+      ],
+      "items": [
+        "habit.akl.kr (39037?) — SSO 리다이렉트 동작인지 서비스 다운인지 미확인",
+        "note.akl.kr — 빈 응답이었음, 정상 여부 미확인",
+        "gcp.akl.kr (40320) — API 전용 서비스, UI 추가 여부 결정 필요",
+        "search.akl.kr (40312) — API 전용 서비스, UI 추가 여부 결정 필요",
+        "akl-accounting (39013) — handle-ui 코드 수정됐으나 재시작 확인 안 함",
+        "akl-hr handle-root 함수 — 사용 안 하는 dead code로 남아있음"
+      ],
+      "exceptions": [
+        "akl-estimate-api/esm2.akl.kr — 서비스 중, 절대 건드리지 말 것"
+      ],
+      "next": [],
+      "date": "2026-05-20"
+    },
+    "dec-fl-inline-js-rule": {
+      "t": "decision",
+      "v": "FL 파일 내 인라인 JS 코드 작성 규칙",
+      "why": [
+        "backtick 템플릿 리터럴 사용 불가 — FL 보간 충돌",
+        "\\${ 이스케이프 미동작 확인됨",
+        "triple-quote 방식(\\\"\\\"\\\"...\\\"\\\"\\\")은 대안이나 검증 안 됨"
+      ],
+      "rules": [
+        "JS 코드 내 변수 출력: '...' + var + '...' 문자열 연결 방식",
+        "array.map(): arrow function 가능하나 ${} 없이",
+        "function(){return} 형태가 가장 안전",
+        "backtick 절대 금지"
+      ],
+      "verified": true,
+      "lock": true,
+      "date": "2026-05-20"
+    },
+    "task-004-step3-reverse-mapper-complete": {
+      "t": "task",
+      "v": "task-004 Step 3 완료: Reverse map 생성 (blocked_by/depends_on/error 역인덱스)",
+      "verified": true,
+      "entry": [
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc-reverse-mapper.fl",
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/reverse-map.json"
+      ],
+      "result": {
+        "blockers": 0,
+        "blocked_total": 0,
+        "dependencies": 2,
+        "dependents_total": 3,
+        "errors": 8,
+        "error_references": 0,
+        "impact_items": 2
+      },
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-reverse-map-ready": {
+      "t": "fact",
+      "v": "Reverse-map.json 완성: 2개 의존성 (3개 노드 영향), 8개 에러 추적 가능",
+      "verified": true,
+      "file": "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/data/reverse-map.json",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "dec-step4-why-command-design": {
+      "t": "decision",
+      "v": "AIRC `why` 명령: AI 네이티브 설계 (구조화, 인간 요약 제거)",
+      "why": [
+        "grep 검색은 관계를 못 본다",
+        "인간 가독성 제거 = AI 추론 용이성 증대",
+        "한 번의 쿼리로 전체 맥락 반환 (추가 조회 불필요)",
+        "depth/type/circular_ref 명시적 표시 → AI가 자동 정렬 가능"
+      ],
+      "design": {
+        "query_format": "airc why <node-id>",
+        "output_structure": [
+          "node metadata (type, value)",
+          "dependencies (needs, blocks)",
+          "blocking_chain (direct + transitive by depth)",
+          "decision_context (relevant decisions)",
+          "errors_relevant (related errors + fixes)",
+          "assumptions (verification status)",
+          "provenance (who/when/why created)",
+          "related_projects (clustering)",
+          "why_blocked (current blocking factors)"
+        ],
+        "ai_capabilities": [
+          "의존성 추론 (직접/간접)",
+          "reverse blocking (역쿼리: 누가 이것을 기다리는가)",
+          "decision alignment check (정책 위반 여부)",
+          "error clustering (같은 에러로 막힌 그룹)",
+          "priority ranking (blocking_chain depth로 자동 정렬)"
+        ]
+      },
+      "implementation": {
+        "phase1": "airc-why-loader.fl (데이터 로드)",
+        "phase2": "airc-graph-traverse.fl (transitive closure)",
+        "phase3": "airc-why-json.fl (AI 최적화 JSON 생성)",
+        "phase4": "airc.fl에 why 명령 통합",
+        "phase5": "5개 샘플로 검증"
+      },
+      "verified": false,
+      "lock": false,
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-step4-paradigm-shift": {
+      "t": "fact",
+      "v": "Step 4는 '문서 검색 시스템'이 아니라 '의존성 기반 추론 엔진'으로의 패러다임 전환",
+      "verified": true,
+      "detail": {
+        "from": "document search (grep, vector search)",
+        "to": "dependency-based reasoning (DFS + transitive closure)",
+        "significance": "AIRC가 '설명 시스템'에서 '프로그램이 의미를 계산하는 시스템'으로 진화",
+        "structure_quality": "AI 친화적 = 계산 가능한 형태 (LLM이 직접 추론 가능)"
+      },
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "task-step4-readiness-check": {
+      "t": "task",
+      "v": "Step 4 구현 전 FreeLang v11 안정성 확인 (3가지)",
+      "verified": false,
+      "checklist": [
+        {
+          "check": "DFS traversal on 68-node graph",
+          "criteria": "cycle infinite loop 방지 + recursion depth <100",
+          "status": "pending"
+        },
+        {
+          "check": "JSON serialization of dependency chain",
+          "criteria": "depth 10+ 깊이 JSON 정상 직렬화 (78KB+ 파일 크기)",
+          "status": "pending"
+        },
+        {
+          "check": "Memory pressure on full graph load",
+          "criteria": "3개 JSON (graph, index, reverse-map) 동시 로드 시 메모리 <50MB",
+          "status": "pending"
+        }
+      ],
+      "decision": "3개 모두 OK → 구현 진행 / 하나라도 실패 → 설계 조정",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "err-step4-potential-risks": {
+      "t": "error",
+      "v": "Step 4 구조의 잠재적 위험 (설계 단계에서 명시)",
+      "cause": "depth 기반 우선순위 + circular reference 표시만으로는 부족할 수 있음",
+      "risks": [
+        {
+          "risk": "그래프 품질이 곧 시스템 성능",
+          "mitigation": "노드/의존성이 느슨하면 → why 결과도 애매해짐. SPEC.airc 데이터 검증 필수."
+        },
+        {
+          "risk": "depth 우선순위는 단순하지만 위험",
+          "mitigation": "실제 중요도 ≠ 그래프 깊이. 나중에 weight/cost/impact 추가 거의 필수."
+        },
+        {
+          "risk": "circular reference 표시만으로는 부족",
+          "mitigation": "실제로는 cycle resolution policy 필요 (cut/collapse/annotate). 지금은 detect만 하고 표시."
+        }
+      ],
+      "severity": "medium",
+      "resolution": "구현 단계에서 각각 handle하거나 문서화 필수. 지금은 aware만 하고 진행.",
+      "date": "2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "u-010": {
+      "t": "user_intent",
+      "v": "Step 4 후의 다음 진화: query planner 또는 AIRC search + why 통합",
+      "quote": "Step 4는 이미 쌓인 시스템을 이해 가능한 형태로 바꾸는 단계. 다음은 진짜로 시스템 성격을 완전히 바꿔버리는 레벨",
+      "source": "session-2026-05-20",
+      "vision": [
+        "why 시스템을 실제로 query planner처럼 만드는 구조",
+        "AIRC search (텍스트) + why (의존성) 통합 구조",
+        "reasoning engine으로의 완전한 전환"
+      ],
+      "immutable": true,
+      "lifecycle": {
+        "state": "active"
+      }
     }
   },
   "lock": [
@@ -1676,16 +1943,38 @@
       "date": "2026-05-20",
       "focus": "task-004: AIRC Semantic Engine. FreeLang 진화 흐름을 의미론적으로 추적하는 엔진 구현."
     },
-    "handoff": [
-      "✅ task-004 Step 2 완료: airc-indexer.fl. 571개 토큰 인덱싱. 다음: Step 3 (reverse map)",
-      "AIRC v2 완성: index/provenance/deps/lifecycle/search 모두 구현",
-      "hot: task-005 — blocked_by ranking 구현 (FreeLang 한계별 차단 프로젝트 수)",
-      "핵심 철학 확정(u-007): PM2(실행)+FreeLang(언어)+AIRC(기억) = 자기 진화형 개발 환경",
-      "FreeLang independence = 측정 가능한 상태로 만드는 것이 목표 (fact-011)",
-      "FREEDOC blocker 필드가 거의 비어있음(fact-008) → task-005 전제 조건",
-      "in_progress 5개 FL 프로젝트 분석 중: dclub-chat/dclub-notes-ai/akl-writer/dclub-notes/evolution-control-tower",
-      "dec-005 lock: .js 서비스 금지. FreeLang 미지원 시 공식 hold"
-    ]
+    "handoff": {
+      "date": "2026-05-20",
+      "session_summary": "AKL 12개 서비스 UI 복구 완료. 4개 주요 실수 AIRC 기록",
+      "completed": [
+        "notify:39004 — deprecated 교체 + JS 보간 충돌 해결",
+        "bookmark:39035 — route 수정",
+        "hr:39036 — route 수정",
+        "analytics:40318 — UI 추가 (cluster 재시작)",
+        "billing:40315, payment:40313, social:40316, subscription:40314",
+        "marketing:40317, media:40311, account:39001, audit:39006"
+      ],
+      "errors_this_session": [
+        "err-010: Python 스크립트 route 변경 누락",
+        "err-011: pm2 로그 오인",
+        "err-012: \\${ 이스케이프 무효 (FL 보간 충돌)",
+        "err-013: analytics standalone vs cluster 혼동",
+        "err-014: check-parens.py 문자열 내부 오카운트"
+      ],
+      "remaining": [
+        "habit.akl.kr / note.akl.kr — 응답 동작 확인",
+        "gcp.akl.kr / search.akl.kr — API 전용 여부 확인",
+        "akl-accounting (39013) — 재시작 확인",
+        "akl-hr — handle-root dead code 제거"
+      ],
+      "lock_reminder": [
+        "FL 인라인 JS: backtick 템플릿 리터럴 금지 (dec-fl-inline-js-rule)",
+        "PM2 재시작: 특정 앱만, 전체 재시작 금지",
+        "sed -i: 절대경로만 사용",
+        "esm2.akl.kr (akl-estimate-api): 절대 건드리지 말 것"
+      ],
+      "hot_next": "task-004-airc-engine-mvp"
+    }
   },
   "index": {
     "by_type": {
