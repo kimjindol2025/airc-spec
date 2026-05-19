@@ -1,0 +1,60 @@
+{
+  "$": "airc-spec",
+  "version": "1.0.0",
+  "project": "{{PROJECT_NAME}}",
+  "date": "{{YYYY-MM-DD}}",
+  "cmd": "python3 -c \"import json; d=json.load(open('SPEC.airc')); print('what:', d['identity']['what']); print('hot:', d['hot'])\"",
+
+  "identity": {
+    "what": "{{한 줄 — 이게 뭔가}}",
+    "why":  "{{존재 이유}}",
+    "for":  "{{대상 — 누가 쓰는가}}",
+    "not":  "{{하지 않는 것 — 범위 제한}}"
+  },
+
+  "hot": "task-001",
+
+  "constitution": {
+    "1": "AI 전용. 인간 가독성을 위한 구조 타협 금지",
+    "2": "identity는 잠긴다. 변경은 사용자 협의 필수. Claude 단독 변경 금지",
+    "3": "hot이 가리키는 task가 지금 당장 해야 할 일이다",
+    "4": "오류·실수도 nodes에 기록한다. 성공만 기록하지 않는다",
+    "5": "노드는 삭제하지 않는다. void 처리만 허용",
+    "6": "why 없는 lock·decision 등록 불가"
+  },
+
+  "types": {
+    "task":     "t + v + entry + check + verified + next",
+    "decision": "t + v + why + lock",
+    "error":    "t + v + cause + fix + repeat_risk"
+  },
+
+  "nodes": {
+
+    "task-001": {
+      "t": "task",
+      "v": "{{첫 번째로 할 일}}",
+      "entry": ["{{파일 또는 명령}}"],
+      "check": ["{{검증 명령}}"],
+      "verified": false,
+      "next": []
+    }
+
+  },
+
+  "lock": [
+    {"rule": "{{금지 사항}}", "why": "{{이유}}"}
+  ],
+
+  "graveyard": [
+    {"idea": "{{버린 아이디어}}", "why": "{{버린 이유}}", "final": true}
+  ],
+
+  "handoff": {
+    "step1": "cmd 실행 → identity·hot 확인",
+    "step2": "graveyard 확인 → 이미 버린 방향인지 체크",
+    "step3": "hot 노드 실행",
+    "step4": "오류 발생 시 error 노드로 기록",
+    "step5": "identity 변경 필요 시 사용자에게 먼저 물어라"
+  }
+}
