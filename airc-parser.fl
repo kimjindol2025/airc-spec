@@ -1,0 +1,86 @@
+;; airc-parser.fl — AIRC SPEC.airc 읽기 + 핵심 정보 출력
+;; task-001: goal consistency 우선. syntax 화려함 아님.
+
+(define SPEC_PATH "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc")
+
+(defn load-spec []
+  (let [$raw (file-read SPEC_PATH)]
+    (if (nil? $raw)
+      (do (println "ERROR: SPEC.airc 없음") nil)
+      (json-parse $raw))))
+
+(defn cmd-hot [$spec]
+  (let [$hot (get $spec "hot")
+        $node (get-in $spec ["nodes" $hot])]
+    (println (str "HOT: " $hot))
+    (println (str "  → " (get $node "v")))
+    (println (str "  next: " (str (get $node "next"))))))
+
+(defn cmd-lock [$spec]
+  (let [$locks (get $spec "lock")]
+    (println "LOCK:")
+    (doseq [$l $locks]
+      (println (str "  [" (get $l "severity") "] " (get $l "rule")))
+      (println (str "      why: " (get $l "why"))))))
+
+(defn cmd-graveyard [$spec]
+  (let [$g (get $spec "graveyard")]
+    (println "GRAVEYARD (재도입 금지):")
+    (doseq [$item $g]
+      (println (str "  ✗ " (get $item "idea")))
+      (println (str "    why: " (get $item "why"))))))
+
+(defn cmd-next [$spec]
+  (let [$hot (get $spec "hot")
+        $node (get-in $spec ["nodes" $hot])
+        $nexts (get $node "next")]
+    (println (str "NEXT (from " $hot "):"))
+    (doseq [$nid $nexts]
+      (let [$n (get-in $spec ["nodes" $nid])]
+        (println (str "  → " $nid ": " (get $n "v")))))))
+
+(defn cmd-handoff [$spec]
+  (let [$h (get-in $spec ["session" "handoff"])]
+    (println "HANDOFF (다음 Claude 인수인계):")
+    (doseq [$line $h]
+      (println (str "  • " $line)))))
+
+(defn cmd-why [$spec $node-id]
+  (let [$node (get-in $spec ["nodes" $node-id])]
+    (if (nil? $node)
+      (println (str "노드 없음: " $node-id))
+      (do
+        (println (str "WHY " $node-id ": " (get $node "v")))
+        (let [$why (get $node "why")]
+          (when (not (nil? $why))
+            (doseq [$w $why]
+              (println (str "  - " $w)))))))))
+
+(defn cmd-status [$spec]
+  (let [$hot  (get $spec "hot")
+        $node (get-in $spec ["nodes" $hot])
+        $sess (get $spec "session")]
+    (println "=== AIRC STATUS ===")
+    (println (str "HOT    : " $hot " — " (get $node "v")))
+    (println (str "NEXT   : " (str (get $node "next"))))
+    (println (str "MODEL  : " (get-in $spec ["session" "current" "model"])))
+    (println (str "DATE   : " (get-in $spec ["session" "current" "date"])))
+    (println "")
+    (println "LOCK (상위 3):")
+    (let [$locks (take 3 (get $spec "lock"))]
+      (doseq [$l $locks]
+        (println (str "  [" (get $l "severity") "] " (get $l "rule")))))
+    (println "")
+    (println "GRAVEYARD:")
+    (doseq [$g (get $spec "graveyard")]
+      (println (str "  ✗ " (get $g "idea"))))
+    (println "")
+    (println "HANDOFF:")
+    (doseq [$h (get-in $spec ["session" "handoff"])]
+      (println (str "  • " $h)))))
+
+;; --- 진입점 ---
+
+(let [$spec (load-spec)]
+  (when (not (nil? $spec))
+    (cmd-status $spec)))

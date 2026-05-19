@@ -4,7 +4,7 @@
   "date": "2026-05-20",
   "cmd": "python3 -c \"import json; d=json.load(open('SPEC.airc')); print('hot:', d['hot']); print('next:', d['nodes'][d['hot']]['next'])\"",
 
-  "hot": "task-001",
+  "hot": "task-002",
 
   "constitution": {
     "1_audience": "AI 전용. 인간 가독성을 위한 구조 타협 금지",
@@ -51,10 +51,10 @@
       "v": "SPEC.airc 확정 및 airc-parser.fl 구현",
       "entry": [
         "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc",
-        "airc-parser.fl (미생성)"
+        "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/airc-parser.fl"
       ],
       "check": ["node /home/kimjin/freelang-v11/bootstrap.js run airc-parser.fl"],
-      "verified": false,
+      "verified": true,
       "next": ["task-002"]
     },
 
