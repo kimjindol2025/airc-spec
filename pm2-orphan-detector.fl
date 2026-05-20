@@ -1,0 +1,170 @@
+;; PM2 Orphan Detector v1.0
+;; Parent PID가 없는 프로세스 찾기
+
+(def PPID_INIT 1)  ;; init process (또는 systemd)
+(def PPID_KTHREADD 2) ;; kernel thread
+
+;; 1. Get all PM2-managed processes
+(defn get-pm2-processes []
+  "PM2가 관리하는 모든 프로세스"
+  (try
+    (let [
+      $pm2-list (shell_exec_result "pm2 list --no-daemon --no-colors 2>/dev/null || true")
+      $lines (if (string? $pm2-list)
+              (str_split $pm2-list "\n")
+              [])]
+
+      (let [
+        $procs []]
+
+        ;; Parse 'pm2 list' output (format: id  name     version  pm_id  status  restart  uptime)
+        (doseq [$line $lines]
+          (if (and (string? $line) (> (length $line) 0))
+            (try
+              ;; Skip header and empty lines
+              (if (and
+                    (not (str_contains $line "name"))
+                    (not (str_contains $line "─"))
+                    (> (length (str_trim $line)) 0))
+                (let [
+                  $parts (str_split (str_trim $line) " ")
+                  $name (if (> (length $parts) 1) (get $parts 1) nil)]
+
+                  (if (string? $name)
+                    (set! $procs (conj $procs $name)))))
+
+              (catch _ nil))))
+
+        $procs))
+
+    (catch _
+      [])))
+
+;; 2. Get process PID by name
+(defn get-process-pid [$name]
+  "서비스명으로 PID 찾기"
+  (try
+    (let [
+      $output (shell_exec_result
+        (str "pgrep -f " (html_escape $name) " | head -1 || true"))]
+
+      (if (and (string? $output) (> (length (str_trim $output)) 0))
+        (parse_int (str_trim $output))
+        nil))
+
+    (catch _
+      nil)))
+
+;; 3. Get process info from /proc
+(defn get-proc-info [$pid]
+  "프로세스의 /proc 정보"
+  (try
+    (let [
+      $stat-file (str "/proc/" $pid "/stat")
+      $status-file (str "/proc/" $pid "/status")]
+
+      (if (file_exists $stat-file)
+        (let [
+          $stat (file_read $stat-file)
+          $stat-parts (str_split $stat " ")
+          $ppid (if (> (length $stat-parts) 3)
+                  (parse_int (get $stat-parts 3))
+                  nil)]
+
+          {
+            "pid" $pid
+            "ppid" $ppid
+            "alive" true
+            "exists" true
+          })
+
+        {:pid $pid :exists false}))
+
+    (catch _
+      {:pid $pid :exists false})))
+
+;; 4. Check if PPID is alive
+(defn check-ppid-alive [$ppid]
+  "Parent PID가 살아있는지 확인"
+  (try
+    (if (or (= $ppid PPID_INIT) (= $ppid PPID_KTHREADD))
+      true  ;; init/kthreadd는 항상 alive
+      (do
+        (shell_exec (str "kill -0 " $ppid " 2>/dev/null"))
+        true))
+    (catch _
+      false)))
+
+;; 5. Detect orphan processes
+(defn detect-orphans []
+  "PM2 프로세스 중 orphan 찾기"
+  (let [
+    $pm2-procs (get-pm2-processes)
+    $orphans []]
+
+    (doseq [$name $pm2-procs]
+      (let [
+        $pid (get-process-pid $name)]
+
+        (if (number? $pid)
+          (let [
+            $info (get-proc-info $pid)
+            $ppid (get $info "ppid")
+            $ppid-alive (if (number? $ppid)
+                          (check-ppid-alive $ppid)
+                          false)]
+
+            (if (not $ppid-alive)
+              (set! $orphans (conj $orphans {
+                "name" $name
+                "pid" $pid
+                "ppid" $ppid
+                "is_orphan" true
+              })))))))
+
+    {
+      "timestamp" (iso8601_now)
+      "total_pm2_procs" (length $pm2-procs)
+      "orphan_count" (length $orphans)
+      "orphans" $orphans
+    }))
+
+;; 6. Kill orphan process
+(defn kill-orphan [$pid $signal]
+  "Orphan 프로세스 종료"
+  (let [
+    $signal (or $signal "SIGTERM")]
+
+    (try
+      (do
+        (shell_exec (str "kill -" $signal " " $pid " 2>/dev/null"))
+        {:killed true :pid $pid :signal $signal})
+
+      (catch $err
+        {:killed false :pid $pid :error (str $err)}))))
+
+;; 7. Generate orphan alert
+(defn generate-orphan-alert []
+  "Orphan 프로세스 감지 alert"
+  (let [
+    $orphans-info (detect-orphans)
+    $orphan-count (get $orphans-info "orphan_count")]
+
+    (if (> $orphan-count 0)
+      {
+        "type" "system"
+        "event" "orphan_processes_detected"
+        "timestamp" (iso8601_now)
+        "detail" $orphans-info
+      }
+      nil)))
+
+;; Export
+(export
+  get-pm2-processes
+  get-process-pid
+  get-proc-info
+  check-ppid-alive
+  detect-orphans
+  kill-orphan
+  generate-orphan-alert)

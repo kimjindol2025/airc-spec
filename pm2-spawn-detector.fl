@@ -1,0 +1,176 @@
+;; PM2 Spawn Detector v1.0
+;; Bootstrap 프로세스 증식 감지
+
+(def BOOTSTRAP_CMD "freelang-v11/bootstrap.js")
+(def SPAWN_THRESHOLD 3)  ;; 3개 이상 = 증식 경고
+(def SPAWN_CHECK_INTERVAL 10) ;; 10초마다 체크
+
+;; 1. Get running bootstrap processes
+(defn get-bootstrap-processes []
+  "실행 중인 bootstrap.js 프로세스 목록"
+  (try
+    (let [
+      $ps-output (shell_exec_result
+        "ps aux | grep freelang-v11/bootstrap.js | grep -v grep")
+      $lines (if (string? $ps-output)
+              (str_split $ps-output "\n")
+              [])]
+
+      (let [
+        $processes []]
+
+        (doseq [$line $lines]
+          (if (and (string? $line) (> (length $line) 0))
+            (try
+              (let [
+                $parts (str_split $line " ")
+                $pid (if (> (length $parts) 1) (parse_int (get $parts 1)) nil)
+                $user (get $parts 0)]
+
+                (if (number? $pid)
+                  (set! $processes (conj $processes {
+                    "pid" $pid
+                    "user" $user
+                    "line" $line
+                  }))))
+
+              (catch _ nil))))
+
+        $processes))
+
+    (catch $err
+      [])))
+
+;; 2. Check for spawn explosion
+(defn detect-spawn-explosion []
+  "bootstrap 증식 감지. threshold 초과 시 alert 반환"
+  (let [
+    $procs (get-bootstrap-processes)
+    $count (length $procs)
+    $is-explosion (> $count SPAWN_THRESHOLD)]
+
+    {
+      "timestamp" (iso8601_now)
+      "bootstrap_count" $count
+      "threshold" SPAWN_THRESHOLD
+      "is_explosion" $is-explosion
+      "processes" $procs
+      "alert" (if $is-explosion
+                (str "SPAWN EXPLOSION: " $count " bootstrap processes detected (threshold: " SPAWN_THRESHOLD ")")
+                nil)
+    }))
+
+;; 3. Get bootstrap process details
+(defn get-process-details [$pid]
+  "특정 bootstrap 프로세스의 상세 정보"
+  (try
+    (let [
+      $stat-file (str "/proc/" $pid "/stat")]
+
+      (if (file_exists $stat-file)
+        (let [
+          $stat (file_read $stat-file)
+          $parts (str_split $stat " ")
+          $ppid (if (> (length $parts) 3) (parse_int (get $parts 3)) nil)
+          $uptime (shell_exec_result (str "ps -p " $pid " -o etime= 2>/dev/null || echo 'unknown'"))]
+
+          {
+            "pid" $pid
+            "ppid" $ppid
+            "uptime" $uptime
+            "file" $stat-file
+          })
+
+        nil))
+
+    (catch _ nil)))
+
+;; 4. Detect parent PID
+(defn get-bootstrap-ppid [$pid]
+  "bootstrap 프로세스의 parent PID"
+  (try
+    (let [
+      $stat-file (str "/proc/" $pid "/stat")
+      $stat (file_read $stat-file)
+      $parts (str_split $stat " ")]
+
+      (if (> (length $parts) 3)
+        (parse_int (get $parts 3))
+        nil))
+
+    (catch _ nil)))
+
+;; 5. Check if parent process is alive
+(defn is-parent-alive? [$ppid]
+  "Parent PID가 살아있는지 확인"
+  (try
+    (shell_exec (str "kill -0 " $ppid " 2>/dev/null"))
+    true
+    (catch _
+      false)))
+
+;; 6. Classify bootstrap processes
+(defn classify-bootstrap-processes []
+  "bootstrap 프로세스를 분류: normal vs orphan vs anomaly"
+  (let [
+    $procs (get-bootstrap-processes)
+    $classified {
+      "normal" []
+      "orphan" []
+      "anomaly" []
+    }]
+
+    (doseq [$proc $procs]
+      (let [
+        $pid (get $proc "pid")
+        $ppid (get-bootstrap-ppid $pid)
+        $parent-alive (if (number? $ppid) (is-parent-alive? $ppid) false)]
+
+        (cond
+          (not (number? $ppid))
+            (set! $classified (assoc $classified "anomaly"
+              (conj (get $classified "anomaly") $proc)))
+
+          (not $parent-alive)
+            (set! $classified (assoc $classified "orphan"
+              (conj (get $classified "orphan") $proc)))
+
+          :else
+            (set! $classified (assoc $classified "normal"
+              (conj (get $classified "normal") $proc))))))
+
+    $classified))
+
+;; 7. Generate alert
+(defn generate-spawn-alert []
+  "Spawn explosion alert 생성"
+  (let [
+    $explosion (detect-spawn-explosion)
+    $classified (classify-bootstrap-processes)
+    $is-alert (get $explosion "is_explosion")]
+
+    (if $is-alert
+      {
+        "type" "system"
+        "event" "spawn_explosion_detected"
+        "service" "bootstrap.js"
+        "timestamp" (iso8601_now)
+        "detail" (merge
+          $explosion
+          {
+            "classification" $classified
+            "orphan_count" (length (get $classified "orphan"))
+            "anomaly_count" (length (get $classified "anomaly"))
+          })
+      }
+      nil)))
+
+;; Export
+(export
+  get-bootstrap-processes
+  detect-spawn-explosion
+  get-process-details
+  get-bootstrap-ppid
+  is-parent-alive?
+  classify-bootstrap-processes
+  generate-spawn-alert)

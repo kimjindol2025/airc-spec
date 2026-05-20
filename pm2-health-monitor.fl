@@ -1,0 +1,190 @@
+;; PM2 Health Monitor v1.0
+;; 전체 PM2 상태 모니터링
+
+(def RESTART_THRESHOLD 10)  ;; 10회 이상 재시작 = 경고
+(def CPU_WARNING_PERCENT 80) ;; CPU 80% 이상 = 경고
+(def MEMORY_WARNING_MB 500) ;; 메모리 500MB 이상 = 경고
+
+;; 1. Get system resource usage
+(defn get-system-resources []
+  "시스템 전체 리소스 사용량"
+  (try
+    (let [
+      $vmstat-output (shell_exec_result "free -b | grep Mem")
+      $uptime-output (shell_exec_result "uptime")]
+
+      {
+        "timestamp" (iso8601_now)
+        "memory_info" $vmstat-output
+        "uptime_info" $uptime-output
+      })
+
+    (catch _
+      {
+        "timestamp" (iso8601_now)
+        "error" "Failed to get system resources"
+      })))
+
+;; 2. Get PM2 status
+(defn get-pm2-status []
+  "PM2 전체 상태"
+  (try
+    (let [
+      $list-output (shell_exec_result
+        "pm2 list --no-daemon --no-colors 2>/dev/null || echo '{}'")]
+
+      {
+        "timestamp" (iso8601_now)
+        "list_output" $list-output
+      })
+
+    (catch _
+      {
+        "timestamp" (iso8601_now)
+        "error" "Failed to get PM2 status"
+      })))
+
+;; 3. Check for restart loops
+(defn detect-restart-loops []
+  "자동 재시작이 많은 프로세스 감지"
+  (try
+    (let [
+      $pm2-monit (shell_exec_result
+        "pm2 monit --no-daemon 2>/dev/null | head -20 || true")
+      $lines (if (string? $pm2-monit)
+              (str_split $pm2-monit "\n")
+              [])]
+
+      (let [
+        $restart-issues []]
+
+        ;; Note: PM2 monit parsing은 복잡함. 실제 구현에서는 pm2 JSON API 사용 권장
+        {
+          "timestamp" (iso8601_now)
+          "restart_issues" $restart-issues
+          "monit_output" (str_take $pm2-monit 500)
+        }))
+
+    (catch _
+      {
+        "timestamp" (iso8601_now)
+        "error" "Failed to detect restart loops"
+      })))
+
+;; 4. Check process CPU/Memory
+(defn check-process-resources [$pid]
+  "특정 프로세스의 CPU/메모리"
+  (try
+    (let [
+      $stat-file (str "/proc/" $pid "/stat")
+      $status-file (str "/proc/" $pid "/status")]
+
+      (if (file_exists $stat-file)
+        (let [
+          $stat (file_read $stat-file)
+          $stat-parts (str_split $stat " ")
+          ;; /proc/PID/stat format: ... utime stime ... vsize rss
+          ;; Index: 13=utime 14=stime 22=vsize 23=rss
+          $vsize (if (> (length $stat-parts) 22)
+                   (parse_int (get $stat-parts 22))
+                   0)
+          $rss (if (> (length $stat-parts) 23)
+                 (parse_int (get $stat-parts 23))
+                 0)
+          $memory-mb (/ $rss 1024)]
+
+          {
+            "pid" $pid
+            "memory_pages" $rss
+            "memory_mb" $memory-mb
+            "virtual_memory" $vsize
+          })
+
+        {:pid $pid :error "No process info"}))
+
+    (catch _
+      {:pid $pid :error "Failed to read process info"})))
+
+;; 5. Health check for critical services
+(defn health-check-critical [$service-name]
+  "Critical 서비스 헬스체크"
+  (try
+    (let [
+      $pid (shell_exec_result
+        (str "pm2 pid " (html_escape $service-name) " 2>/dev/null || echo '0'"))
+      $pid-num (if (string? $pid)
+                 (parse_int (str_trim $pid))
+                 0)]
+
+      (if (> $pid-num 0)
+        {
+          "service" $service-name
+          "status" "running"
+          "pid" $pid-num
+          "resources" (check-process-resources $pid-num)
+        }
+
+        {
+          "service" $service-name
+          "status" "not_running"
+          "pid" 0
+        }))
+
+    (catch _
+      {
+        "service" $service-name
+        "status" "unknown"
+        "error" "Failed to check health"
+      })))
+
+;; 6. Generate comprehensive health report
+(defn generate-health-report []
+  "전체 헬스 리포트"
+  (let [
+    $system-res (get-system-resources)
+    $pm2-status (get-pm2-status)
+    $restart-loops (detect-restart-loops)
+    $critical-services [
+      "pm2-daemon"
+      "freelang-mcp"
+    ]]
+
+    {
+      "timestamp" (iso8601_now)
+      "system" $system-res
+      "pm2" $pm2-status
+      "issues" $restart-loops
+      "critical_services" (let [
+        $checks []]
+        (doseq [$service $critical-services]
+          (set! $checks (conj $checks (health-check-critical $service))))
+        $checks)
+    }))
+
+;; 7. Generate alerts from health report
+(defn generate-health-alerts [$report]
+  "헬스 리포트에서 alert 생성"
+  (let [
+    $alerts []]
+
+    ;; Check critical services
+    (doseq [$svc (get $report "critical_services")]
+      (if (not (= (get $svc "status") "running"))
+        (set! $alerts (conj $alerts {
+          "type" "system"
+          "event" "critical_service_down"
+          "service" (get $svc "service")
+          "timestamp" (iso8601_now)
+        }))))
+
+    $alerts))
+
+;; Export
+(export
+  get-system-resources
+  get-pm2-status
+  detect-restart-loops
+  check-process-resources
+  health-check-critical
+  generate-health-report
+  generate-health-alerts)
