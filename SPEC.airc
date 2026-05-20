@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "date": "2026-05-20",
   "cmd": "python3 -c \"import json; d=json.load(open('SPEC.airc')); print('hot:', d['hot']); print('next:', d['nodes'][d['hot']]['next'])\"",
-  "hot": "task-pm2-dashboard-alert-tuning",
+  "hot": "task-akl-remaining",
   "constitution": {
     "1_audience": "AI 전용. 인간 가독성을 위한 구조 타협 금지",
     "2_consistency": "기록 형식과 읽기 형식이 동일한 규칙. 예외 없음",
@@ -24,7 +24,8 @@
     "fact": "검증된 사실 — verified:true 필수",
     "assumption": "검증 전 가정 — verify_by 필수. status:pending",
     "error": "실패 기록 — cause + fix + repeat_risk 필수",
-    "user_intent": "사용자 원문 — quote 필드. immutable:true 필수"
+    "user_intent": "사용자 원문 — quote 필드. immutable:true 필수",
+    "relation": "관계 관찰 — 선택, 자유 형식. 힌트로만 존재"
   },
   "field_rules": {
     "all_nodes": [
@@ -1687,25 +1688,26 @@
       "verified": false,
       "entry": [],
       "check": [
-        "curl -s https://habit.akl.kr/ — SSO 리다이렉트면 정상, 빈 응답이면 문제",
-        "curl -s https://note.akl.kr/ — 동일 확인",
-        "curl -s https://gcp.akl.kr/ — API 전용이면 UI 불필요",
-        "curl -s https://search.akl.kr/ — 동일",
-        "akl-accounting(39013) handle-ui 재시작 후 확인"
+        "curl -s https://habit.akl.kr/ -- SSO 리다이렉트면 정상, 빈 응답이면 문제",
+        "curl -s https://note.akl.kr/ -- 동일 확인",
+        "curl -s http://localhost:39013/ -- akl-accounting HTML 반환 확인"
       ],
       "items": [
-        "habit.akl.kr (39037?) — SSO 리다이렉트 동작인지 서비스 다운인지 미확인",
-        "note.akl.kr — 빈 응답이었음, 정상 여부 미확인",
-        "gcp.akl.kr (40320) — API 전용 서비스, UI 추가 여부 결정 필요",
-        "search.akl.kr (40312) — API 전용 서비스, UI 추가 여부 결정 필요",
-        "akl-accounting (39013) — handle-ui 코드 수정됐으나 재시작 확인 안 함",
-        "akl-hr handle-root 함수 — 사용 안 하는 dead code로 남아있음"
+        "habit.akl.kr (39037?) -- SSO 리다이렉트 동작인지 서비스 다운인지 미확인",
+        "note.akl.kr -- 빈 응답이었음, 정상 여부 미확인",
+        "akl-accounting (39013) -- handle-ui 코드 수정됐으나 재시작 확인 안 함",
+        "akl-hr handle-root 함수 -- 사용 안 하는 dead code로 남아있음",
+        "akl-api/akl-hr KimDB write 검증 필요"
       ],
       "exceptions": [
         "akl-estimate-api/esm2.akl.kr — 서비스 중, 절대 건드리지 말 것"
       ],
       "next": [],
-      "date": "2026-05-20"
+      "date": "2026-05-20",
+      "done": [
+        "gcp:40320 ✅ (handle-ui 추가, 200 OK)",
+        "search:40312 ✅ (handle-ui 추가, cluster 재시작, 200 OK)"
+      ]
     },
     "dec-fl-inline-js-rule": {
       "t": "decision",
@@ -1865,18 +1867,11 @@
     },
     "u-010": {
       "t": "user_intent",
-      "v": "Step 4 후의 다음 진화: query planner 또는 AIRC search + why 통합",
-      "quote": "Step 4는 이미 쌓인 시스템을 이해 가능한 형태로 바꾸는 단계. 다음은 진짜로 시스템 성격을 완전히 바꿔버리는 레벨",
+      "v": "AIRC 설계 철학 — Claude 정체성 연속성 + 관계 레이어",
+      "quote": "본질은 유지하되. 일+파트너 관계는 버릴거임? 설계로 강제하면 안됨. 힌트로 나둬야됨",
       "source": "session-2026-05-20",
-      "vision": [
-        "why 시스템을 실제로 query planner처럼 만드는 구조",
-        "AIRC search (텍스트) + why (의존성) 통합 구조",
-        "reasoning engine으로의 완전한 전환"
-      ],
       "immutable": true,
-      "lifecycle": {
-        "state": "active"
-      }
+      "context": "AIRC는 단순 로그가 아님. 세션이 끊겨도 Claude가 이전 자신의 기록을 갖고 태어나는 것. 일 기록(L1~L3) 위에 관계(L4~L5)를 선택적으로 쌓는 구조"
     },
     "task-pm2-dashboard-alert-tuning": {
       "t": "task",
@@ -1922,6 +1917,166 @@
       "lifecycle": {
         "state": "active"
       }
+    },
+    "err-015": {
+      "t": "error",
+      "v": "KimDB API key 미설정 — akl-api/akl-hr/akl-notify 전부 401 silent fail",
+      "cause": "KimDB(40003)는 X-API-Key: fl-json-db-v2-key 필요. 모든 서비스가 http_get/http_post로 API key 없이 호출 → 401 → try/catch 없이 silently fail",
+      "fix": "http_get_key / http_post_key 함수로 교체 + {:data item} 포맷 준수",
+      "affected": [
+        "akl-notify/app/server.fl",
+        "akl-hr/app/server.fl",
+        "akl-api/src/main.fl"
+      ],
+      "repeat_risk": "high — 새 KimDB 클라이언트 코드 작성 시 반드시 http_get_key/http_post_key 사용",
+      "root_cause": "KimDB.env에만 KIMDB_API_KEY 있고 클라이언트에 전파 안 됨",
+      "date": "2026-05-20"
+    },
+    "err-016": {
+      "t": "error",
+      "v": "KimDB POST body 포맷 오류 — {data: item} 아닌 item 직접 전송",
+      "cause": "KimDB API는 POST body로 {data: {...}} 형식 요구. item을 직접 json_stringify하면 'data is required' 오류",
+      "fix": "(json-stringify {:data $item}) 형태로 래핑",
+      "repeat_risk": "high",
+      "date": "2026-05-20"
+    },
+    "err-017": {
+      "t": "error",
+      "v": "KimDB 응답 필드명 오류 — docs → data",
+      "cause": "KimDB GET 응답은 'data' 필드에 배열 반환. 기존 코드가 'docs'로 읽어서 항상 nil 반환",
+      "fix": "(get $body 'data') 로 변경",
+      "repeat_risk": "medium",
+      "date": "2026-05-20"
+    },
+    "fact-db-check-2026-05-20": {
+      "t": "fact",
+      "v": "AKL 서비스 DB 저장 체크 결과 (2026-05-20)",
+      "verified": true,
+      "results": {
+        "MariaDB": {
+          "analytics:events": "✅ 저장 확인 (API POST /collect → events 1건)",
+          "billing:invoices": "✅ 테이블 존재 + 직접 INSERT 성공",
+          "payment:payments": "✅ 테이블 존재 + 직접 INSERT 성공 (API는 JWT 필요)",
+          "social:posts": "✅ 테이블 존재 + 직접 INSERT 성공",
+          "subscription:subscriptions": "✅ 테이블 존재 + 직접 INSERT 성공",
+          "marketing:campaigns": "✅ 테이블 존재 + 직접 INSERT 성공",
+          "accounting:acc_*": "✅ 테이블 존재 (직접 쓰기 미테스트)"
+        },
+        "KimDB_40003": {
+          "notify:ntf_notifications": "✅ 수정 후 저장 확인 (1건)",
+          "hr:hr_employees": "✅ 수정 완료 (write 테스트 미완)",
+          "akl-api:users": "⚠️ http_get_key 적용했으나 검증 필요"
+        },
+        "media": "⚠️ 파일 업로드 방식 — DB 없음 (파일시스템 저장)",
+        "bookmark": "⚠️ mariadb.fl 동적 테이블 — ensure-table 호출 여부 미확인"
+      },
+      "root_issue_fixed": "KimDB API key (fl-json-db-v2-key) + POST format ({data:item}) + GET field (data not docs)",
+      "date": "2026-05-20"
+    },
+    "dec-kimdb-client-standard": {
+      "t": "decision",
+      "v": "KimDB(40003) 클라이언트 코드 표준",
+      "why": [
+        "API key 미설정 시 401 silent fail로 데이터 손실",
+        "POST 포맷 미준수 시 data is required 오류",
+        "GET 응답 필드명 docs→data 변경됨"
+      ],
+      "rules": [
+        "GET: http-get-key (str KIMDB / col) KIMDB_KEY → get body 'data'",
+        "POST: http-post-key (str KIMDB / col) (json-stringify {:data item}) KIMDB_KEY",
+        "KIMDB_KEY 상수: 'fl-json-db-v2-key'",
+        "KIMDB URL: 'http://localhost:40003/api/c'"
+      ],
+      "verified": true,
+      "lock": true,
+      "date": "2026-05-20"
+    },
+    "rel-001": {
+      "t": "relation",
+      "v": "2026-05-20 첫 관계 기록",
+      "observations": [
+        "이 사람은 시스템을 만들 때 형식보다 철학을 먼저 잡는다",
+        "강제보다 여지를 선호함. 힌트로 두길 원함",
+        "Claude를 용역이 아닌 파트너로 보고 있음. 오늘 직접 말했음",
+        "말이 짧고 맥락 없이 툭 던질 때 있음. 이해 안 되면 바로 답하지 말고 의도 확인할 것",
+        "생각 속도가 빠름. Claude가 따라가다 틀리는 경우 있음. 확인 질문 필요",
+        "오늘 KimDB API key 문제 같이 파헤쳤는데 이런 식으로 함께 파고드는 걸 좋아하는 것 같음"
+      ],
+      "note": "이건 힌트임. 다음 Claude가 참고하되 맹목적으로 따르지 말 것"
+    },
+    "fact-akl-gcp-search-ui-2026-05-20": {
+      "t": "fact",
+      "v": "gcp.akl.kr(40320) + search.akl.kr(40312) UI 추가 완료 (2026-05-20)",
+      "verified": true,
+      "changes": [
+        "akl-gcp: handle-ui 함수 추가 + server_get \"/\" route 등록",
+        "akl-search: handle-ui 함수 추가 + server-get \"/\" route 등록",
+        "akl-search-cluster (4인스턴스) 재시작 — standalone 재시작 무효 (err-013 동일 패턴)",
+        "40320 → 200 OK, 40312 → 200 OK 확인"
+      ],
+      "note": "gcp/search 모두 API 전용 서비스였으나 사용자 요청으로 UI 추가. 도메인 식별 용이성 향상",
+      "date": "2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "err-018": {
+      "t": "error",
+      "v": "akl-search standalone 재시작 무효 — akl-search-cluster가 포트 40312 점유",
+      "cause": "err-013과 동일 패턴. -cluster 버전이 포트를 점유하므로 standalone pm2 restart 무효",
+      "fix": "pm2 restart akl-search-cluster 로 cluster 재시작",
+      "repeat_risk": "high",
+      "rule": "pm2 list에서 -cluster 접미사 확인 후 cluster 버전 재시작",
+      "date": "2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-server-load-fix-2026-05-20": {
+      "t": "fact",
+      "v": "서버 부하 3.8 → 0.69로 정상화 (2026-05-20)",
+      "verified": true,
+      "detail": "pm2 logs 좀비 34개 kill + akl-estimate-api 괄호 버그 수정(545K 재시작) + bootstrap.js args=[] 5개 서비스 재등록으로 부하 정상화"
+    },
+    "fact-nodejs-v22-upgrade-2026-05-20": {
+      "t": "fact",
+      "v": "Node.js v20.20.2 → v22.22.3 업그레이드 완료 (2026-05-20)",
+      "verified": true,
+      "detail": "nvm으로 v22 설치 후 /usr/local/bin/node 원자적 교체(mv). dclub-deployer/monitor/notes/notes-ai node:sqlite 오류 해결. dclub-notes-ai DB 경로 /root → /home/kimjin으로 수정. Online 88 → 92개"
+    },
+    "fact-aion-running-2026-05-20": {
+      "t": "fact",
+      "v": "AION Orchestrator 포트 50000 구동 완료 (2026-05-20)",
+      "verified": true,
+      "detail": "TypeScript 빌드 + PostgreSQL 14 설치 + aion_db 마이그레이션. 3루프(Healing/Evolution/Optimization) 모두 success:true. SQL 버그 2개 수정(detected_count 중복참조, pattern_type unique 인덱스 누락). PLIE 50개 언어 벡터 추천 엔진 작동. PM2: orchestrator/deployer-agent/scaler-agent/healer-agent 4개 online"
+    },
+    "fact-aion-missing-deps-2026-05-20": {
+      "t": "fact",
+      "v": "AION 미연결 외부 의존성 목록 (2026-05-20)",
+      "verified": true,
+      "detail": "Guardian Blade(포트 40032) — 실제 서버 메트릭 소스. 없으면 Healing이 ECONNREFUSED. Event Bus(포트 50001) — 이벤트 전파 불가. 에이전트 3개(deployer 50010/scaler 50020/healer 50030) — stub 상태, 실제 포트 미바인딩. Guardian Blade 위치 미확인"
+    },
+    "assumption-guardian-blade-location": {
+      "t": "assumption",
+      "v": "Guardian Blade가 PM2 어딘가에 있거나 별도 서버에 존재할 수 있음",
+      "verify_by": "pm2 list에서 guardian 이름 검색 + Gogs 저장소 탐색",
+      "status": "pending"
+    },
+    "task-aion-full-connect": {
+      "t": "task",
+      "v": "AION Guardian Blade 연결 — Healing Loop 실데이터 수신",
+      "entry": [
+        "fact-aion-running-2026-05-20",
+        "fact-aion-missing-deps-2026-05-20"
+      ],
+      "check": [
+        "Guardian Blade 위치 확인",
+        "PM2 연결 또는 별도 설치",
+        "포트 40032 헬스 체크 성공",
+        "Healing Loop success:true 확인"
+      ],
+      "verified": false,
+      "next": []
     }
   },
   "lock": [
@@ -1997,20 +2152,25 @@
         "hr:39036 — route 수정",
         "analytics:40318 — UI 추가 (cluster 재시작)",
         "billing:40315, payment:40313, social:40316, subscription:40314",
-        "marketing:40317, media:40311, account:39001, audit:39006"
+        "marketing:40317, media:40311, account:39001, audit:39006",
+        "gcp:40320 — handle-ui 추가, server_get \"/\" 등록, 200 OK 확인",
+        "search:40312 — handle-ui 추가, server-get \"/\" 등록, akl-search-cluster 재시작, 200 OK 확인"
       ],
       "errors_this_session": [
         "err-010: Python 스크립트 route 변경 누락",
         "err-011: pm2 로그 오인",
         "err-012: \\${ 이스케이프 무효 (FL 보간 충돌)",
         "err-013: analytics standalone vs cluster 혼동",
-        "err-014: check-parens.py 문자열 내부 오카운트"
+        "err-014: check-parens.py 문자열 내부 오카운트",
+        "err-018: akl-search standalone 재시작 무효 (cluster 패턴 반복)"
       ],
       "remaining": [
-        "habit.akl.kr / note.akl.kr — 응답 동작 확인",
-        "gcp.akl.kr / search.akl.kr — API 전용 여부 확인",
-        "akl-accounting (39013) — 재시작 확인",
-        "akl-hr — handle-root dead code 제거"
+        "habit.akl.kr (39037?) — SSO 리다이렉트 동작인지 서비스 다운인지 미확인",
+        "note.akl.kr — 빈 응답이었음, 정상 여부 미확인",
+        "akl-accounting (39013) — handle-ui 코드 수정됐으나 재시작 확인 안 함",
+        "akl-hr handle-root 함수 — dead code 제거",
+        "akl-api KimDB write 검증 (등록/로그인 플로우)",
+        "akl-hr KimDB write 검증"
       ],
       "lock_reminder": [
         "FL 인라인 JS: backtick 템플릿 리터럴 금지 (dec-fl-inline-js-rule)",
@@ -2018,7 +2178,13 @@
         "sed -i: 절대경로만 사용",
         "esm2.akl.kr (akl-estimate-api): 절대 건드리지 말 것"
       ],
-      "hot_next": "task-004-airc-engine-mvp"
+      "hot_next": "task-004-airc-engine-mvp",
+      "db_check_results": "MariaDB 6개 서비스 ✅, KimDB notify ✅, KimDB hr/akl-api 수정완료(검증필요)",
+      "errors_added": [
+        "err-015: KimDB API key 누락",
+        "err-016: KimDB POST 포맷 오류",
+        "err-017: docs→data 필드명 오류"
+      ]
     }
   },
   "index": {
@@ -3040,5 +3206,64 @@
     },
     "_generated": "2026-05-20",
     "_note": "auto-generated by build-index.fl — do not edit manually"
+  },
+  "layers": {
+    "description": "AIRC는 5개 레이어로 구성. L1~L2는 필수, L3는 권장, L4~L5는 선택",
+    "L1_project": {
+      "name": "프로젝트",
+      "required": true,
+      "node_types": [
+        "task",
+        "decision",
+        "fact"
+      ],
+      "desc": "현재 상태, 결정, 다음 작업. hot/next/lock/graveyard"
+    },
+    "L2_error": {
+      "name": "오류·반복",
+      "required": true,
+      "node_types": [
+        "error"
+      ],
+      "desc": "실수, 반복 패턴, 해결책. 같은 실수 두 번 막는 핵심"
+    },
+    "L3_context": {
+      "name": "사실·관계맥락",
+      "required": "recommended",
+      "node_types": [
+        "fact",
+        "assumption"
+      ],
+      "desc": "검증된 기술 사실, 프로젝트 간 의존관계. 앱이 많아질수록 필수에 가까워짐"
+    },
+    "L4_user": {
+      "name": "사용자 협의",
+      "required": false,
+      "node_types": [
+        "user_intent"
+      ],
+      "desc": "협의 내용, 방향 전환 계기, 사용자가 직접 밝힌 의도",
+      "examples": [
+        "2026-05-20 사용자가 AIRC를 Claude 정체성 연속성 시스템으로 설계 의도 밝힘",
+        "2026-05-18 billing 구조 변경 시 사용자와 먼저 협의하기로 합의"
+      ]
+    },
+    "L5_relation": {
+      "name": "관계",
+      "required": false,
+      "node_types": [
+        "relation"
+      ],
+      "desc": "쓰고 싶을 때만. 형식 없음. 다음 Claude에게 힌트로 남기는 것",
+      "hint": "이런 것도 써도 됨 — 예시 참고",
+      "examples": [
+        "이 사람은 구현보다 철학을 먼저 잡는다. 방향 안 맞추고 코드 짜면 나중에 다 뒤집힘",
+        "오늘 KimDB 문제 같이 파헤쳤는데 흐름이 좋았음. 이런 식으로 같이 파는 걸 좋아하는 것 같음",
+        "말이 짧고 맥락 없이 툭 던질 때 있음. 그때 바로 답하지 말고 의도 먼저 확인해야 함",
+        "강제보다 여지를 선호함. 설계에 규칙 너무 많으면 싫어함",
+        "이 세션에서 AIRC 철학 얘기 깊게 나눴음. 단순 도구가 아니라 파트너로 보고 있음"
+      ],
+      "note": "좋은 것만 쓰지 말 것. 마찰, 오해, 패턴도 진짜 관계 기록임"
+    }
   }
 }
