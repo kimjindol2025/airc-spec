@@ -1,0 +1,189 @@
+;; PM2 Gateway v1.0
+;; 유일한 PM2 Mutation 경로 (모든 변경은 이 API 경유)
+;; 포트: 40256 (pm2-dashboard 40255 + 1)
+
+(require "./akl-lib/http-escape")
+(require "./akl-lib/auth-csrf")
+
+(def PORT 40256)
+(def GATEWAY_LOG "/data/pm2-gateway.log")
+(def ACTIONS_LOG "/data/pm2-actions.jsonl")
+
+;; Role-based whitelist
+(def ROLE_PERMISSIONS {
+  "admin"  {:actions ["restart" "start" "stop" "delete" "reload"]}
+  "tier2"  {:actions ["restart" "start" "stop" "reload"]}
+  "tier1"  {:actions ["restart" "reload"]}
+  "view"   {:actions []}
+})
+
+;; Atomic lock (O_EXCL)
+(defn acquire-lock [$service $timeout-seconds]
+  "서비스별 lock 취득. 이미 있으면 nil, 성공하면 lock-id 반환"
+  (let [
+    $lock-file (str "/tmp/pm2-action-" $service ".lock")
+    $lock-data {
+      "service" $service
+      "pid" (process_pid)
+      "startedAt" (iso8601_now)
+      "timeoutSec" $timeout-seconds
+    }]
+    (try
+      ;; O_EXCL: 파일이 이미 있으면 실패
+      (file_write $lock-file (json_stringify $lock-data) {:mode "wx"})
+      $lock-file  ;; 성공: lock 파일 경로 반환
+      (catch err
+        ;; 파일이 이미 있음 → lock 취득 실패
+        nil))))
+
+(defn release-lock [$lock-file]
+  "lock 파일 삭제"
+  (if (file_exists $lock-file)
+    (do
+      (file_delete $lock-file)
+      true)
+    false))
+
+(defn check-lock [$service]
+  "현재 서비스의 lock 상태 확인"
+  (let [
+    $lock-file (str "/tmp/pm2-action-" $service ".lock")]
+    (if (file_exists $lock-file)
+      (try
+        (json_parse (file_read $lock-file))
+        (catch _ nil))
+      nil)))
+
+;; Audit log (append-only JSONL)
+(defn log-action [$action $service $result $metadata]
+  "Operator action을 JSONL에 append"
+  (let [
+    $entry {
+      "type" "operator"
+      "action" $action
+      "service" $service
+      "session" (or (getenv "CLAUDE_SESSION") "unknown")
+      "timestamp" (iso8601_now)
+      "result" $result
+      "metadata" $metadata
+    }]
+    (file_append ACTIONS_LOG (json_stringify $entry "\n"))))
+
+(defn log-system-event [$event $service $detail]
+  "System event를 JSONL에 append"
+  (let [
+    $entry {
+      "type" "system"
+      "event" $event
+      "service" $service
+      "timestamp" (iso8601_now)
+      "detail" $detail
+    }]
+    (file_append ACTIONS_LOG (json_stringify $entry "\n"))))
+
+;; PM2 command execution (with validation)
+(defn execute-pm2-command [$action $service]
+  "PM2 명령 실행. 성공하면 {:ok true}, 실패하면 {:ok false :error ...}"
+  (try
+    (case $action
+      "restart" (do
+        (shell_exec (str "pm2 restart " (html_escape $service)))
+        {:ok true})
+      "start" (do
+        (shell_exec (str "pm2 start " (html_escape $service)))
+        {:ok true})
+      "stop" (do
+        (shell_exec (str "pm2 stop " (html_escape $service)))
+        {:ok true})
+      "delete" (do
+        (shell_exec (str "pm2 delete " (html_escape $service)))
+        {:ok true})
+      "reload" (do
+        (shell_exec (str "pm2 reload " (html_escape $service)))
+        {:ok true})
+      ;; default
+      {:ok false :error "Unknown action"})
+    (catch err
+      {:ok false :error (str "PM2 error: " err)})))
+
+;; Main action handler
+(defn handle-action [$req]
+  "POST /pm2/action
+   Body: {action, service, role, session}"
+  (let [
+    $body (or (get $req "body") {})
+    $action (html_escape (get $body "action"))
+    $service (html_escape (get $body "service"))
+    $role (or (get $body "role") "view")
+    $session (or (get $body "session") "unknown")
+
+    ;; 권한 확인
+    $allowed-actions (get (get ROLE_PERMISSIONS $role) "actions")
+    $has-permission (if $allowed-actions
+                      (some? (filter #(= $action %) $allowed-actions))
+                      false)
+    ]
+
+    ;; 1. 권한 확인
+    (if (not $has-permission)
+      (do
+        (log-action $action $service "denied" {"reason" "insufficient_role" "role" $role})
+        (server_json {
+          "status" "error"
+          "code" 403
+          "message" (str "Role '" $role "' cannot perform '" $action "'")
+        } 403))
+
+      ;; 2. Lock 취득 시도 (60초 timeout)
+      (let [
+        $lock (acquire-lock $service 60)]
+
+        (if (not $lock)
+          (do
+            (log-action $action $service "queued" {"reason" "lock_wait"})
+            (server_json {
+              "status" "error"
+              "code" 409
+              "message" (str "Service '" $service "' is locked. Try again later.")
+            } 409))
+
+          ;; 3. PM2 명령 실행
+          (let [
+            $result (execute-pm2-command $action $service)]
+
+            ;; 4. Lock 해제
+            (release-lock $lock)
+
+            ;; 5. Audit 로그
+            (if (get $result "ok")
+              (log-action $action $service "success" {})
+              (log-action $action $service "failed" {"error" (get $result "error")}))
+
+            ;; 6. 응답
+            (server_json (assoc $result
+              "status" (if (get $result "ok") "ok" "error")
+              "service" $service
+              "action" $action
+              "timestamp" (iso8601_now)))))))))
+
+;; Health check endpoint
+(defn handle-health [$req]
+  "GET /pm2/health"
+  (server_json {
+    "status" "ok"
+    "timestamp" (iso8601_now)
+    "port" PORT
+    "role_count" (count ROLE_PERMISSIONS)
+  }))
+
+;; Server start
+(def $server
+  (server_start
+    :port PORT
+    :host "0.0.0.0"))
+
+(server_post $server "/pm2/action" handle-action)
+(server_get $server "/pm2/health" handle-health)
+
+(println (str "PM2 Gateway listening on port " PORT))
+(println (str "Log files: " ACTIONS_LOG))

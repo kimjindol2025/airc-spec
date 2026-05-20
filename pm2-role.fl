@@ -1,0 +1,203 @@
+;; PM2 Role-Based Access Control v1.0
+;; Role hierarchy and permission management
+
+;; Role hierarchy (higher = more privileges)
+;;  admin
+;;    ├─ tier2
+;;    │   └─ tier1
+;;    │       └─ view
+
+(def ROLE_HIERARCHY {
+  "view"   0   ;; read-only
+  "tier1"  1   ;; restart, reload
+  "tier2"  2   ;; tier1 + start, stop
+  "admin"  3   ;; all actions
+})
+
+(def ACTIONS_BY_ROLE {
+  "view" [
+    ;; no write actions
+  ]
+  "tier1" [
+    "restart"   ;; safe, process stays alive
+    "reload"    ;; graceful restart
+  ]
+  "tier2" [
+    "restart"
+    "reload"
+    "start"     ;; can start stopped services
+    "stop"      ;; can stop services
+  ]
+  "admin" [
+    "restart"
+    "reload"
+    "start"
+    "stop"
+    "delete"    ;; dangerous: remove service from PM2
+  ]
+})
+
+;; Dangerous actions (require extra confirmation)
+(def DANGEROUS_ACTIONS #{
+  "delete"      ;; removes service completely
+  "monit"       ;; monitoring parameter change
+  "env"         ;; environment variable change
+})
+
+;; Service-level restrictions (some services can't be stopped)
+(def SERVICE_RESTRICTIONS {
+  "pm2-daemon" {
+    "allowed_actions" ["reload"]
+    "reason" "PM2 daemon cannot be restarted directly"
+  }
+  "freelang-mcp" {
+    "allowed_actions" ["restart" "reload"]
+    "reason" "MCP server is critical"
+  }
+})
+
+;; 1. Get user role from session
+(defn get-user-role [$session-id]
+  "Determine user role from session. Defaults to 'view'."
+  (try
+    ;; TODO: Query from session store / auth service
+    ;; For now, use environment variable or session lookup
+    (or (getenv "PM2_USER_ROLE") "view")
+
+    (catch _ "view")))
+
+;; 2. Check if action is allowed for role
+(defn can-perform-action? [$role $action]
+  "Check if role is allowed to perform action."
+  (let [
+    $allowed-actions (get ACTIONS_BY_ROLE $role [])]
+    (some? (filter #(= $action %) $allowed-actions))))
+
+;; 3. Check if role has privilege level >= required level
+(defn has-privilege? [$role $required-privilege]
+  "Check if role has at least the required privilege level.
+   Example: (has-privilege? 'tier1' 2) → false (tier1=1 < required=2)"
+  (let [
+    $role-level (get ROLE_HIERARCHY $role 0)
+    $required-level (if (string? $required-privilege)
+                      (get ROLE_HIERARCHY $required-privilege 0)
+                      $required-privilege)]
+    (>= $role-level $required-level)))
+
+;; 4. Check service-specific restrictions
+(defn get-service-restrictions [$service]
+  "Get service-specific restrictions, if any."
+  (get SERVICE_RESTRICTIONS $service nil))
+
+;; 5. Validate action against service restrictions
+(defn can-act-on-service? [$role $action $service]
+  "Check if role can perform action on specific service."
+  (let [
+    $restrictions (get-service-restrictions $service)]
+
+    (if $restrictions
+      ;; Service has restrictions
+      (some? (filter #(= $action %) (get $restrictions "allowed_actions" [])))
+
+      ;; No restrictions → check role
+      (can-perform-action? $role $action))))
+
+;; 6. Require extra confirmation for dangerous actions
+(defn requires-confirmation? [$action]
+  "Check if action requires additional confirmation."
+  (contains? DANGEROUS_ACTIONS $action))
+
+;; 7. Build audit metadata for dangerous actions
+(defn audit-metadata [$role $action $service]
+  "Generate audit metadata for logging."
+  (let [
+    $is-dangerous (requires-confirmation? $action)
+    $role-level (get ROLE_HIERARCHY $role 0)]
+
+    {
+      "dangerous" $is-dangerous
+      "role_level" $role-level
+      "requires_confirmation" $is-dangerous
+      "service_restricted" (not (nil? (get-service-restrictions $service)))
+    }))
+
+;; 8. Comprehensive access check
+(defn check-access [$role $action $service]
+  "Complete access control check. Returns {:allowed true/false :reason '...'}"
+  (let [
+    ;; Check 1: Role exists
+    $role-exists (contains? ROLE_HIERARCHY $role)
+    ;; Check 2: Action allowed for role
+    $action-allowed (can-perform-action? $role $action)
+    ;; Check 3: Service restrictions
+    $service-allowed (can-act-on-service? $role $action $service)
+    ;; Check 4: Dangerous action
+    $is-dangerous (requires-confirmation? $action)
+  ]
+
+    (cond
+      (not $role-exists)
+        {:allowed false :reason (str "Unknown role: " $role)}
+
+      (not $action-allowed)
+        {:allowed false :reason (str "Role '" $role "' cannot perform '" $action "'")}
+
+      (not $service-allowed)
+        {:allowed false
+         :reason (str "Service '" $service "' does not allow '" $action "'")
+         :restriction (get (get-service-restrictions $service) "reason")}
+
+      $is-dangerous
+        {:allowed true
+         :warning (str "Action '" $action "' requires confirmation")
+         :dangerous true
+         :metadata (audit-metadata $role $action $service)}
+
+      :else
+        {:allowed true :metadata (audit-metadata $role $action $service)})))
+
+;; 9. List available actions for a role
+(defn list-available-actions [$role]
+  "List all actions available to a role."
+  (let [
+    $actions (get ACTIONS_BY_ROLE $role [])]
+    {
+      "role" $role
+      "level" (get ROLE_HIERARCHY $role 0)
+      "actions" $actions
+      "count" (length $actions)
+    }))
+
+;; 10. Get role hierarchy info
+(defn get-role-info [$role]
+  "Get detailed info about a role."
+  (let [
+    $level (get ROLE_HIERARCHY $role nil)
+    $actions (get ACTIONS_BY_ROLE $role [])]
+
+    (if (nil? $level)
+      {:error (str "Unknown role: " $role)}
+
+      {
+        "role" $role
+        "level" $level
+        "actions" $actions
+        "action_count" (length $actions)
+        "is_admin" (= $role "admin")
+      })))
+
+;; Export
+(export
+  ROLE_HIERARCHY
+  ACTIONS_BY_ROLE
+  DANGEROUS_ACTIONS
+  get-user-role
+  can-perform-action?
+  has-privilege?
+  get-service-restrictions
+  can-act-on-service?
+  requires-confirmation?
+  audit-metadata
+  check-access
+  list-available-actions
+  get-role-info)

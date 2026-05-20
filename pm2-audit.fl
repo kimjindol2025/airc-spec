@@ -1,0 +1,131 @@
+;; PM2 Audit Log Manager v1.0
+;; Append-only JSONL for all PM2 mutations
+
+(def AUDIT_LOG "/data/pm2-actions.jsonl")
+
+;; 1. Log Operator Action
+(defn log-operator-action [$action $service $session $result $metadata]
+  "Log an operator action"
+  (let [
+    $entry {
+      "type" "operator"
+      "action" $action
+      "service" $service
+      "session" (or $session "unknown")
+      "timestamp" (iso8601_now)
+      "result" $result
+      "metadata" (or $metadata {})
+    }]
+
+    (try
+      (do
+        (if (not (file_exists (dirname AUDIT_LOG)))
+          (shell_exec (str "mkdir -p " (dirname AUDIT_LOG))))
+
+        (file_append AUDIT_LOG
+          (str (json_stringify $entry) "\n"))
+
+        {:logged true})
+
+      (catch $err
+        {:logged false :error (str $err)}))))
+
+;; 2. Log System Event
+(defn log-system-event [$event $service $detail]
+  "Log a system event"
+  (let [
+    $entry {
+      "type" "system"
+      "event" $event
+      "service" (or $service "unknown")
+      "timestamp" (iso8601_now)
+      "detail" (or $detail {})
+    }]
+
+    (try
+      (do
+        (if (not (file_exists (dirname AUDIT_LOG)))
+          (shell_exec (str "mkdir -p " (dirname AUDIT_LOG))))
+
+        (file_append AUDIT_LOG
+          (str (json_stringify $entry) "\n"))
+
+        {:logged true})
+
+      (catch $err
+        {:logged false :error (str $err)}))))
+
+;; 3. Rotate Log
+(defn rotate-log []
+  "Rotate audit log when size exceeds limit"
+  (try
+    (if (file_exists AUDIT_LOG)
+      (let [
+        $size (file_size AUDIT_LOG)
+        $max-size (* 100 1024 1024)]
+
+        (if (> $size $max-size)
+          (let [
+            $timestamp (iso8601_now)
+            $backup (str AUDIT_LOG "." $timestamp)]
+
+            (shell_exec (str "mv " AUDIT_LOG " " $backup))
+            {:rotated true :backup-file $backup})))
+
+      {:rotated false :reason "log_not_found"})
+
+    (catch $err
+      {:rotated false :error (str $err)})))
+
+;; 4. Query Audit Log
+(defn query-audit-log [$filter]
+  "Query audit log by filter"
+  (try
+    (if (not (file_exists AUDIT_LOG))
+      {:entries [] :count 0}
+
+      (let [
+        $lines (str_split (file_read AUDIT_LOG) "\n")
+        $entries []]
+
+        (doseq [$line $lines]
+          (if (> (length $line) 0)
+            (try
+              (set! $entries (conj $entries (json_parse $line)))
+              (catch _ nil))))
+
+        {:entries $entries :count (length $entries)}))
+
+    (catch $err
+      {:entries [] :error (str $err)})))
+
+;; 5. Get Audit Summary
+(defn get-audit-summary [$limit]
+  "Get last N audit entries"
+  (try
+    (if (not (file_exists AUDIT_LOG))
+      {:entries [] :count 0}
+
+      (let [
+        $lines (str_split (file_read AUDIT_LOG) "\n")
+        $entries []
+        $limit (or $limit 100)]
+
+        (doseq [$line (reverse $lines)]
+          (if (and (> (length $line) 0) (< (length $entries) $limit))
+            (try
+              (set! $entries (conj $entries (json_parse $line)))
+              (catch _ nil))))
+
+        {:entries $entries :count (length $entries)}))
+
+    (catch $err
+      {:entries [] :error (str $err)})))
+
+;; Export
+(export
+  log-operator-action
+  log-system-event
+  rotate-log
+  query-audit-log
+  get-audit-summary)

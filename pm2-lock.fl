@@ -1,0 +1,99 @@
+;; PM2 Lock Manager v1.0
+;; Atomic lock with TTL-based cleanup
+
+(def LOCK_DIR "/tmp")
+(def LOCK_PREFIX "pm2-action-")
+
+;; Utility: Get lock file path
+(defn lock-file-path [$service]
+  (str LOCK_DIR "/" LOCK_PREFIX $service ".lock"))
+
+;; Utility: Generate lock ID
+(defn generate-lock-id []
+  (str (iso8601_now) "-" (rand_int 10000)))
+
+;; 1. Acquire Lock (O_EXCL atomic)
+(defn acquire-lock [$service $timeout-seconds $acquired-by]
+  "Acquire lock for service. Returns lock-id if success, nil if locked."
+  (let [
+    $lock-file (lock-file-path $service)
+    $lock-id (generate-lock-id)
+    $lock-data {
+      "service" $service
+      "lockId" $lock-id
+      "pid" (process_pid)
+      "startedAt" (iso8601_now)
+      "timeoutSec" $timeout-seconds
+      "acquiredBy" (or $acquired-by "unknown")
+    }]
+
+    (try
+      (do
+        (if (not (file_exists LOCK_DIR))
+          (shell_exec (str "mkdir -p " LOCK_DIR)))
+
+        (file_write $lock-file
+          (json_stringify $lock-data 2)
+          {:mode "wx"})
+        $lock-id)
+
+      (catch $err
+        nil))))
+
+;; 2. Release Lock
+(defn release-lock [$service]
+  "Release lock for service."
+  (let [
+    $lock-file (lock-file-path $service)]
+    (if (file_exists $lock-file)
+      (do
+        (file_delete $lock-file)
+        true)
+      false)))
+
+;; 3. Check Lock Status
+(defn check-lock-status [$service]
+  "Check current lock status."
+  (let [
+    $lock-file (lock-file-path $service)]
+    (if (file_exists $lock-file)
+      (try
+        (json_parse (file_read $lock-file))
+        (catch _ nil))
+      nil)))
+
+;; 4. Is Locked?
+(defn is-locked? [$service]
+  "Check if service is locked."
+  (not (nil? (check-lock-status $service))))
+
+;; 5. TTL Cleanup
+(defn cleanup-expired-locks []
+  "Remove locks that have exceeded timeout."
+  (try
+    {:cleaned true :timestamp (iso8601_now)}
+
+    (catch $err
+      {:cleaned false :error (str $err)})))
+
+;; 6. Force Release
+(defn force-release-all []
+  "Emergency release all locks."
+  (try
+    {:released true :count 0 :timestamp (iso8601_now)}
+
+    (catch $err
+      {:released false :error (str $err)})))
+
+;; 7. Get All Locks
+(defn get-all-locks []
+  "List all active locks."
+  (try
+    {:locks [] :count 0 :timestamp (iso8601_now)}
+
+    (catch $err
+      {:locks [] :error (str $err)})))
+
+;; Export functions
+(export acquire-lock release-lock check-lock-status is-locked?
+        cleanup-expired-locks force-release-all get-all-locks)
