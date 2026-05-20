@@ -2250,6 +2250,38 @@
         "fv-lang (FreeWire 출력 함수형 언어)",
         "personal-code-os (FreeWire 통합 브라우저 OS)"
       ]
+    },
+    "fact-incomplete-projects-2026-05-20": {
+      "t": "fact",
+      "v": "탐색 중 발견한 미완성/실행불가 프로젝트 목록",
+      "verified": true,
+      "date": "2026-05-20",
+      "projects": [
+        {
+          "name": "freelang-zero-copy-db",
+          "path": "/home/kimjin/kim/Desktop/kim/01_Active_Projects/freelang-zero-copy-db",
+          "reason": "FreeLang v11 문법 아님. module/func/@inline/i64 등 존재하지 않는 버전 문법으로 작성. 실행 불가. COMPLETION_REPORT는 실제 측정값이 아닌 예상 수치.",
+          "status": "설계 문서 수준"
+        },
+        {
+          "name": "fv-lang",
+          "path": "/home/kimjin/kim/Desktop/kim/01_Active_Projects/fv-lang",
+          "reason": "Archive — 더 이상 지원하지 않음 (2026-03-15)",
+          "status": "archived"
+        },
+        {
+          "name": "raft-sharded-db",
+          "path": "/home/kimjin/kim/Desktop/kim/01_Active_Projects/raft-sharded-db",
+          "reason": "README에 체크리스트만 있고 실제 구현 없음. 프로젝트 준비 단계에서 중단.",
+          "status": "미착수"
+        },
+        {
+          "name": "synaptic-pilot",
+          "path": "/home/kimjin/kim/Desktop/kim/01_Active_Projects/synaptic-pilot",
+          "reason": "README 2줄짜리 스텁. 신경망 기반 AI 시스템이라는 설명만 있고 코드 없음.",
+          "status": "미착수"
+        }
+      ]
     }
   },
   "lock": [
