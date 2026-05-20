@@ -2282,6 +2282,45 @@
           "status": "미착수"
         }
       ]
+    },
+    "fact-dclub-chat-port-fix": {
+      "t": "fact",
+      "v": "dclub-chat 포트 충돌 해결: 39031→40205",
+      "verified": true,
+      "date": "2026-05-21",
+      "cause": "akl-calendar(PM2 id:57 없음, node 2206898)가 39031 선점 → dclub-chat 1783회 재시작 루프",
+      "fix": "lib/config.fl :port 39031→40205, FREEDOC.fds port 동기화",
+      "port": 40205,
+      "status": "online"
+    },
+    "fact-mongodb-driver-complete": {
+      "t": "fact",
+      "v": "freelang-mongodb-driver Phase 1-3 전부 완료 — STATUS.md가 구식이었음",
+      "verified": true,
+      "date": "2026-05-21",
+      "location": "/home/kimjin/freelang-v11/self/stdlib/mongodb.fl",
+      "tested_against": "MongoDB 7.0 (Docker, localhost:27017)",
+      "crud": [
+        "mongo-find",
+        "mongo-find-one",
+        "mongo-insert",
+        "mongo-insert-many",
+        "mongo-update",
+        "mongo-update-many",
+        "mongo-delete",
+        "mongo-delete-many",
+        "mongo-count",
+        "mongo-aggregate",
+        "mongo-create-index",
+        "mongo-list-collections"
+      ],
+      "helpers": [
+        "mongo-set",
+        "mongo-inc",
+        "mongo-push",
+        "mongo-pull"
+      ],
+      "architecture": "FreeLang → bson-encode-native → wire-send-command → net-sendrecv-pool(TCP) → MongoDB"
     }
   },
   "lock": [
