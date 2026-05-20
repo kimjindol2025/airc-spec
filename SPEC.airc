@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "date": "2026-05-20",
   "cmd": "python3 -c \"import json; d=json.load(open('SPEC.airc')); print('hot:', d['hot']); print('next:', d['nodes'][d['hot']]['next'])\"",
-  "hot": "task-akl-remaining",
+  "hot": "dec-kimdb-client-v2",
   "constitution": {
     "1_audience": "AI 전용. 인간 가독성을 위한 구조 타협 금지",
     "2_consistency": "기록 형식과 읽기 형식이 동일한 규칙. 예외 없음",
@@ -2089,6 +2089,130 @@
       "verified": true,
       "detail": "프리랭이 부족해서 중단됐던 AION. v11.6.19에서 5개 의존 서비스를 FreeLang으로 구현. guardian-blade(40032)/event-bus(50001)/deployer(50010)/scaler(50020)/healer(50030). 총 5개 FL 파일 501줄. 3루프 전부 success:true. 에이전트 3/3 연결.",
       "project_path": "/home/kimjin/kim/Desktop/kim/01_Active_Projects/aion-services/app/"
+    },
+    "dec-kimdb-client-v2": {
+      "t": "decision",
+      "v": "KimDB(40003)를 AKL 전체 표준 JSON 저장소로 확정. 모든 클라이언트 코드 통일",
+      "why": [
+        "40003이 kimdb — 사용자 직접 확정 (2026-05-20)",
+        "기존 코드가 API key 없이 401 silent fail",
+        "docs 필드 → data 필드 변경 미반영 서비스 다수"
+      ],
+      "rules": [
+        "KIMDB = http://localhost:40003/api/c",
+        "KIMDB_KEY = fl-json-db-v2-key",
+        "GET: http-get-key (str KIMDB col) KIMDB_KEY → get body data",
+        "POST: http-post-key (str KIMDB col) (json-stringify {:data item}) KIMDB_KEY",
+        "http_request 패턴: kimdb-headers에 X-API-Key: KIMDB_KEY 포함",
+        "http_get/http_post 직접 사용 금지"
+      ],
+      "fixed": [
+        "akl-timetrack",
+        "akl-shop",
+        "akl-crm (akl/)",
+        "akl-hq",
+        "akl-account",
+        "akl-inventory",
+        "akl-community-ws",
+        "akl-partner",
+        "akl-skeleton",
+        "bw-contract",
+        "akl-note (akl/)",
+        "akl-project",
+        "akl-storage",
+        "akl-support",
+        "akl-estimate",
+        "akl-calendar (akl/)",
+        "akl-audit (akl/)",
+        "akl-bookmark (akl/)",
+        "akl-analytics (akl/)",
+        "akl-client",
+        "akl-admin",
+        "services/akl-crm",
+        "services/akl-storage",
+        "akl-api (akl/ copy)",
+        "akl-inventory/db-client"
+      ],
+      "verified": true,
+      "lock": true,
+      "date": "2026-05-20"
+    },
+    "err-019": {
+      "t": "error",
+      "v": "services/akl-crm: http_request 헤더에 X-API-Key 누락",
+      "cause": "kimdb-headers() 함수가 Content-Type만 반환. X-API-Key 없음",
+      "fix": "kimdb-headers에 X-API-Key: KIMDB_KEY 추가",
+      "repeat_risk": "medium — http_request 커스텀 패턴 사용 시 반드시 헤더 확인",
+      "date": "2026-05-20",
+      "lifecycle": {
+        "state": "active"
+      }
+    },
+    "fact-kimdb-standardization-2026-05-20": {
+      "t": "fact",
+      "v": "KimDB(40003) 클라이언트 25개 파일 일괄 수정 완료 (2026-05-20)",
+      "verified": true,
+      "changes": [
+        "API key 추가 (KIMDB_KEY = fl-json-db-v2-key)",
+        "docs → data 필드 수정",
+        "http_get → http-get-key",
+        "http_post → http-post-key + {data:item} 래핑",
+        "port 40000 → 40003 수정 (inventory db-client)"
+      ],
+      "services_restarted": [
+        "akl-shop",
+        "akl-crm",
+        "akl-hq",
+        "akl-timetrack",
+        "akl-partner",
+        "akl-support",
+        "akl-storage"
+      ],
+      "date": "2026-05-20"
+    },
+    "fix-akl-lib-auth-mock-2026-05-20": {
+      "t": "fix",
+      "v": "akl-lib/auth.fl 목 → 실제 akl-api:39000 구현으로 수정",
+      "why": "get-user가 토큰 substring을 userId로 반환하던 가짜 구현이었음. 모든 서비스의 인증이 무의미했음",
+      "fix": "http_get_bearer AKL_USERINFO_URL $token 호출로 실제 검증. Bearer + akl_token 쿠키 지원",
+      "files": [
+        "/home/kimjin/services/akl-lib/auth.fl",
+        "/home/kimjin/kim/Desktop/kim/akl/akl-lib/auth.fl"
+      ],
+      "date": "2026-05-20"
+    },
+    "fix-akl-api-db-post-wrap-2026-05-20": {
+      "t": "fix",
+      "v": "akl-api db-post KimDB v2 {:data ...} 래핑 누락 수정",
+      "why": "db-post가 json_stringify $body 직접 전송. KimDB v2는 {data: ...} 래핑 필요. register 시 200 반환하나 저장 안됨",
+      "fix": "json_stringify {:data $body} 로 변경",
+      "file": "/home/kimjin/services/akl-api/src/main.fl line 89",
+      "date": "2026-05-20"
+    },
+    "done-akl-sso-unified-2026-05-20": {
+      "t": "task",
+      "v": "AKL SSO 통합 인증 완성 — 1개 토큰으로 7개 서비스 접근",
+      "entry": [
+        "akl-lib/auth.fl 실제 구현",
+        "akl-api db-post 수정",
+        "25개 서비스 KimDB 표준화",
+        "akl-hike dedupe 추가"
+      ],
+      "check": "토큰 sso-test@akl.kr → 7개 서비스 200 확인 완료",
+      "verified": true,
+      "date": "2026-05-20",
+      "services_ok": [
+        "akl-writing",
+        "akl-wiki",
+        "akl-budget",
+        "akl-journal",
+        "akl-hike",
+        "akl-mindmap",
+        "akl-people"
+      ],
+      "services_legacy": [
+        "akl-crm (32100, ?userId 쿼리 파라미터 레거시 패턴)"
+      ]
     }
   },
   "lock": [
@@ -2209,7 +2333,8 @@
         "task-004",
         "task-004-airc-engine-mvp",
         "task-004-step1-parser-complete",
-        "task-005"
+        "task-005",
+        "done-akl-sso-unified-2026-05-20"
       ],
       "decision": [
         "dec-001",
@@ -2268,6 +2393,10 @@
       "problem": [
         "task-003-progress",
         "task-003-batch-convert"
+      ],
+      "fix": [
+        "fix-akl-lib-auth-mock-2026-05-20",
+        "fix-akl-api-db-post-wrap-2026-05-20"
       ]
     },
     "by_tag": {
