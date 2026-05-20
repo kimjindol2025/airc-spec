@@ -2213,6 +2213,43 @@
       "services_legacy": [
         "akl-crm (32100, ?userId 쿼리 파라미터 레거시 패턴)"
       ]
+    },
+    "fact-freewire-pm2": {
+      "t": "fact",
+      "v": "FreeWire — 노드 기반 시각 프로그래밍 환경. FreeLang 컴포넌트 코드 자동 생성",
+      "verified": true,
+      "date": "2026-05-20",
+      "ports": {
+        "api": 40202,
+        "www": 40203
+      },
+      "pm2": [
+        "freewire-api (id:111)",
+        "freewire-www (id:112)"
+      ],
+      "location": "/home/kimjin/kim/Desktop/kim/01_Active_Projects/FreeWire",
+      "phase": "1-16 완료 (516/516 테스트)",
+      "stack": "nodejs + @anthropic-ai/sdk",
+      "features": [
+        "Canvas/SVG 노드 에디터 (드래그, 연결, Minimap, MultiSelect)",
+        "GraphCompiler: 노드 그래프 → FreeLang .free 코드",
+        "FreeExecutor: .free → HTML/CSS/JS",
+        "Intent 시스템: Contract(requires/ensures/produces/warns) + 자동 수리 루프",
+        "AdaptiveLoop: 수정 이력 localStorage 영속 → 다음 수정 시 사전 경고",
+        "AI 자율 에이전트 (Phase 16): 자연어 → 노드 그래프 → HTML (Claude Tool Use, max 10턴)",
+        "WebSocket 실시간 협업 (Phase 12)",
+        "ANTHROPIC_API_KEY 없을 때 규칙 기반 폴백 자동 전환"
+      ],
+      "use_case": "FreeLang server.fl 작성 전 UI 구조 시각화 프로토타이핑 테스트베드",
+      "urls": {
+        "editor": "http://localhost:40203",
+        "api_health": "http://localhost:40202/health",
+        "ai_agent": "node src/agent/run-agent.js '자연어 설명'"
+      },
+      "related": [
+        "fv-lang (FreeWire 출력 함수형 언어)",
+        "personal-code-os (FreeWire 통합 브라우저 OS)"
+      ]
     }
   },
   "lock": [
