@@ -2060,23 +2060,35 @@
       "t": "assumption",
       "v": "Guardian Blade가 PM2 어딘가에 있거나 별도 서버에 존재할 수 있음",
       "verify_by": "pm2 list에서 guardian 이름 검색 + Gogs 저장소 탐색",
-      "status": "pending"
+      "status": "resolved",
+      "resolved_by": "fact-aion-running-2026-05-20",
+      "note": "기존 없음 — FreeLang으로 신규 구현"
     },
     "task-aion-full-connect": {
       "t": "task",
-      "v": "AION Guardian Blade 연결 — Healing Loop 실데이터 수신",
+      "v": "AION Guardian Blade + Event Bus + 에이전트 3개 연결 완료 (2026-05-20)",
       "entry": [
         "fact-aion-running-2026-05-20",
         "fact-aion-missing-deps-2026-05-20"
       ],
       "check": [
-        "Guardian Blade 위치 확인",
-        "PM2 연결 또는 별도 설치",
-        "포트 40032 헬스 체크 성공",
-        "Healing Loop success:true 확인"
+        "✅ guardian-blade :40032 — 실CPU/메모리 데이터",
+        "✅ aion-event-bus :50001 — pub/sub",
+        "✅ aion-deployer :50010 — PM2 재시작 위임",
+        "✅ aion-scaler :50020 — 스케일 판단",
+        "✅ aion-healer :50030 — errored 서비스 자동 복구",
+        "✅ AION 3루프 success:true (healing+evolution+optimization)",
+        "✅ 에이전트 available_count: 3/3"
       ],
-      "verified": false,
+      "verified": true,
       "next": []
+    },
+    "fact-aion-full-stack-2026-05-20": {
+      "t": "fact",
+      "v": "AION 전체 스택 FreeLang으로 완성 (2026-05-20)",
+      "verified": true,
+      "detail": "프리랭이 부족해서 중단됐던 AION. v11.6.19에서 5개 의존 서비스를 FreeLang으로 구현. guardian-blade(40032)/event-bus(50001)/deployer(50010)/scaler(50020)/healer(50030). 총 5개 FL 파일 501줄. 3루프 전부 success:true. 에이전트 3/3 연결.",
+      "project_path": "/home/kimjin/kim/Desktop/kim/01_Active_Projects/aion-services/app/"
     }
   },
   "lock": [
