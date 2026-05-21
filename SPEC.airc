@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "date": "2026-05-20",
   "cmd": "python3 -c \"import json; d=json.load(open('SPEC.airc')); print('hot:', d['hot']); print('next:', d['nodes'][d['hot']]['next'])\"",
-  "hot": "dec-kimdb-client-v2",
+  "hot": "dec-dclub-auth-unified-idp",
   "constitution": {
     "1_audience": "AI 전용. 인간 가독성을 위한 구조 타협 금지",
     "2_consistency": "기록 형식과 읽기 형식이 동일한 규칙. 예외 없음",
@@ -2321,6 +2321,71 @@
         "mongo-pull"
       ],
       "architecture": "FreeLang → bson-encode-native → wire-send-command → net-sendrecv-pool(TCP) → MongoDB"
+    },
+    "dec-dclub-auth-unified-idp": {
+      "t": "decision",
+      "v": "dclub-auth(port 30100)를 dclub.kr 플랫폼 전체 IdP로 통일",
+      "why": "각 서비스마다 자체 auth 로직이 흩어져 있어 유지보수 불가. 단일 IdP로 토큰 발급/검증 집중화.",
+      "what": {
+        "idp": "http://localhost:30100",
+        "token_mode": "HS256 dev, secret=env:DCLUB_AUTH_SECRET",
+        "userinfo": "GET /userinfo (Bearer 필수)",
+        "quick_token": "POST /quick-token (데모용)"
+      },
+      "lock": true,
+      "verified": "2026-05-21",
+      "next": [
+        "task-dclub-auth-secret-env",
+        "task-dclub-services-auth-integration"
+      ]
+    },
+    "fact-dclub-auth-working-2026-05-21": {
+      "t": "fact",
+      "v": "dclub-auth 30100 온라인. /userinfo HS256 검증 정상. demo user UUID=4d4d12d4-6b6b-4594-8908-9d6d7c9e749c",
+      "verified": true,
+      "details": {
+        "port": 30100,
+        "pm2_id": 109,
+        "token_alg": "HS256",
+        "secret_hardcoded": "dclub-auth-dev-secret",
+        "userinfo_response": {
+          "sub": "uuid",
+          "name": "Demo User",
+          "email": "demo@dclub.kr",
+          "email_verified": true
+        },
+        "ui": "http://localhost:30100 (홈 + 로그인 페이지)"
+      },
+      "fixed": [
+        "config.fl nil crash",
+        "userinfo.fl [FUNC] syntax",
+        "quick-login.fl fake JWT"
+      ]
+    },
+    "fact-dclub-auth-integration-pattern": {
+      "t": "fact",
+      "v": "dclub 서비스가 dclub-auth를 연동하는 표준 패턴 (3단계)",
+      "verified": true,
+      "pattern": {
+        "step1_verify": "Authorization: Bearer <token> → GET http://localhost:30100/userinfo → {sub, name, email}",
+        "step2_cache": "서비스 내부에서 sub(UUID)로 사용자 식별. DB users 테이블에 sub 컬럼 추가.",
+        "step3_reject": "401 응답 시 → 클라이언트에 401 전달"
+      },
+      "example_fl": "(defn verify-token [$token] (let [[$res (http-get-bearer \"http://localhost:30100/userinfo\" $token)]] (if (= (get $res \"status\") 200) (get $res \"body\") nil)))"
+    },
+    "task-dclub-services-auth-integration": {
+      "t": "task",
+      "v": "dclub 서비스들에 dclub-auth 연동 추가",
+      "entry": "각 서비스 server.fl에 auth-middleware 추가",
+      "check": "GET /userinfo 호출 성공 + sub 추출",
+      "verified": false,
+      "services": [
+        "dclub-tasks",
+        "dclub-notes",
+        "dclub-gateway",
+        "dclub-chat(이미됨)"
+      ],
+      "next": []
     }
   },
   "lock": [
