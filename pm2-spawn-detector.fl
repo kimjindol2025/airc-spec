@@ -104,8 +104,9 @@
 (defn is-parent-alive? [$ppid]
   "Parent PID가 살아있는지 확인"
   (try
-    (shell_exec (str "kill -0 " $ppid " 2>/dev/null"))
-    true
+    (do
+      (shell_exec (str "kill -0 " $ppid " 2>/dev/null"))
+      true)
     (catch _
       false)))
 

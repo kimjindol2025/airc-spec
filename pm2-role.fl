@@ -38,11 +38,11 @@
 })
 
 ;; Dangerous actions (require extra confirmation)
-(def DANGEROUS_ACTIONS #{
+(def DANGEROUS_ACTIONS [
   "delete"      ;; removes service completely
   "monit"       ;; monitoring parameter change
   "env"         ;; environment variable change
-})
+])
 
 ;; Service-level restrictions (some services can't be stopped)
 (def SERVICE_RESTRICTIONS {
@@ -71,7 +71,7 @@
   "Check if role is allowed to perform action."
   (let [
     $allowed-actions (get ACTIONS_BY_ROLE $role [])]
-    (some? (filter #(= $action %) $allowed-actions))))
+      (some? (filter (fn [$candidate] (= $action $candidate)) $allowed-actions))))
 
 ;; 3. Check if role has privilege level >= required level
 (defn has-privilege? [$role $required-privilege]
@@ -97,7 +97,7 @@
 
     (if $restrictions
       ;; Service has restrictions
-      (some? (filter #(= $action %) (get $restrictions "allowed_actions" [])))
+      (some? (filter (fn [$candidate] (= $action $candidate)) (get $restrictions "allowed_actions" [])))
 
       ;; No restrictions → check role
       (can-perform-action? $role $action))))

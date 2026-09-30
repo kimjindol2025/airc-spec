@@ -71,7 +71,7 @@
 (defn cleanup-expired-locks []
   "Remove locks that have exceeded timeout."
   (try
-    {:cleaned true :timestamp (iso8601_now)}
+    (do {:cleaned true :timestamp (iso8601_now)})
 
     (catch $err
       {:cleaned false :error (str $err)})))
@@ -80,7 +80,7 @@
 (defn force-release-all []
   "Emergency release all locks."
   (try
-    {:released true :count 0 :timestamp (iso8601_now)}
+    (do {:released true :count 0 :timestamp (iso8601_now)})
 
     (catch $err
       {:released false :error (str $err)})))
@@ -89,7 +89,7 @@
 (defn get-all-locks []
   "List all active locks."
   (try
-    {:locks [] :count 0 :timestamp (iso8601_now)}
+    (do {:locks [] :count 0 :timestamp (iso8601_now)})
 
     (catch $err
       {:locks [] :error (str $err)})))

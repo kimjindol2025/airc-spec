@@ -14,7 +14,7 @@
 ;;   airc causes <id>        — provenance.causes (이 노드가 만든 결과)
 ;;   airc graph              — 전체 dep/provenance 텍스트 그래프
 
-(define SPEC_PATH "/home/kimjin/kim/Desktop/kim/02_Infrastructure/airc-spec/SPEC.airc")
+(define SPEC_PATH "SPEC.airc")
 
 (defn load-spec []
   (let [$raw (file-read SPEC_PATH)]

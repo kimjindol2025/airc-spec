@@ -29,9 +29,10 @@
       "timeoutSec" $timeout-seconds
     }]
     (try
-      ;; O_EXCL: 파일이 이미 있으면 실패
-      (file_write $lock-file (json_stringify $lock-data) {:mode "wx"})
-      $lock-file  ;; 성공: lock 파일 경로 반환
+      (do
+        ;; O_EXCL: 파일이 이미 있으면 실패
+        (file_write $lock-file (json_stringify $lock-data) {:mode "wx"})
+        $lock-file)  ;; 성공: lock 파일 경로 반환
       (catch err
         ;; 파일이 이미 있음 → lock 취득 실패
         nil))))
@@ -120,7 +121,7 @@
     ;; 권한 확인
     $allowed-actions (get (get ROLE_PERMISSIONS $role) "actions")
     $has-permission (if $allowed-actions
-                      (some? (filter #(= $action %) $allowed-actions))
+                      (some? (filter (fn [$candidate] (= $action $candidate)) $allowed-actions))
                       false)
     ]
 
